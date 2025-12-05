@@ -1,5 +1,5 @@
 from django import forms
-from core.models import Clazz, Teacher, Student, Staff, Enrollment
+from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance
 
 class BootstrapFormMixin:
     def __init__(self, *args, **kwargs):
@@ -50,4 +50,26 @@ class EnrollmentForm(BootstrapFormMixin, forms.ModelForm):
         fields = '__all__'
         widgets = {
             'enrollment_date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class ClassTypeForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = ClassType
+        fields = '__all__'
+
+class ScheduleForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Schedule
+        fields = '__all__'
+        widgets = {
+            'start_time': forms.TimeInput(attrs={'type': 'time'}),
+            'end_time': forms.TimeInput(attrs={'type': 'time'}),
+        }
+
+class AttendanceForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Attendance
+        fields = '__all__'
+        widgets = {
+            'date': forms.DateInput(attrs={'type': 'date'}),
         }

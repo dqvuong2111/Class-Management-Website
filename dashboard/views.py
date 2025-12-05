@@ -1,8 +1,10 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
-from core.models import Clazz, Teacher, Student, Staff, Enrollment
-from .forms import ClassForm, TeacherForm, StudentForm, StaffForm, EnrollmentForm
+from django import forms
+import datetime
+from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance
+from .forms import ClassForm, TeacherForm, StudentForm, StaffForm, EnrollmentForm, ClassTypeForm, ScheduleForm, AttendanceForm
 from django.db.models import Count, Q
 
 def is_staff_user(user):
@@ -49,6 +51,44 @@ def student_dashboard_view(request):
         'student': student,
         'enrollments': enrollments
     })
+
+@login_required
+def student_courses_view(request):
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        messages.error(request, "You are not registered as a student.")
+        return redirect('home')
+    enrollments = student.enrollments.all().select_related('clazz', 'clazz__class_type', 'clazz__teacher')
+    return render(request, 'dashboard/student_courses.html', {'student': student, 'enrollments': enrollments})
+
+@login_required
+def student_schedule_view(request):
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        messages.error(request, "You are not registered as a student.")
+        return redirect('home')
+    
+    # Get all enrollments for the student
+    enrollments = student.enrollments.all()
+    
+    # Get all schedules related to the student's enrolled classes
+    schedules = Schedule.objects.filter(clazz__enrollments__student=student).distinct()
+
+    return render(request, 'dashboard/student_schedule.html', {'student': student, 'schedules': schedules})
+
+@login_required
+def student_achievements_view(request):
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        messages.error(request, "You are not registered as a student.")
+        return redirect('home')
+    
+    enrollments = student.enrollments.all().select_related('clazz', 'clazz__class_type', 'clazz__teacher')
+
+    return render(request, 'dashboard/student_achievements.html', {'student': student, 'enrollments': enrollments})
 
 @login_required
 @user_passes_test(is_staff_user, login_url="accounts:login")
@@ -220,3 +260,176 @@ def delete_enrollment_view(request, pk):
     enrollment.delete()
     messages.success(request, "Enrollment removed successfully!")
     return redirect('dashboard:manage_enrollments')
+
+# Staff Management
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def manage_staff_view(request):
+    query = request.GET.get('q')
+    staff_members = Staff.objects.all()
+
+    if query:
+        staff_members = staff_members.filter(
+            Q(full_name__icontains=query) |
+            Q(email__icontains=query) |
+            Q(position__icontains=query)
+        )
+
+    return render(request, 'dashboard/manage_staff.html', {'staff_members': staff_members, 'query': query})
+
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def add_staff_view(request):
+    if request.method == 'POST':
+        form = StaffForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Staff member added successfully!")
+            return redirect('dashboard:manage_staff')
+    else:
+        form = StaffForm()
+    return render(request, 'dashboard/add_staff.html', {'form': form})
+
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def edit_staff_view(request, pk):
+    staff_member = get_object_or_404(Staff, pk=pk)
+    if request.method == 'POST':
+        form = StaffForm(request.POST, instance=staff_member)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Staff member updated successfully!")
+            return redirect('dashboard:manage_staff')
+    else:
+        form = StaffForm(instance=staff_member)
+    return render(request, 'dashboard/edit_staff.html', {'form': form})
+
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def delete_staff_view(request, pk):
+    staff_member = get_object_or_404(Staff, pk=pk)
+    staff_member.delete()
+    messages.success(request, "Staff member deleted successfully!")
+    return redirect('dashboard:manage_staff')
+
+# Class Type Management
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def manage_class_types_view(request):
+    class_types = ClassType.objects.all()
+    return render(request, 'dashboard/manage_class_types.html', {'class_types': class_types})
+
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def add_class_type_view(request):
+    if request.method == 'POST':
+        form = ClassTypeForm(request.POST)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Class Type added successfully!")
+            return redirect('dashboard:manage_class_types')
+    else:
+        form = ClassTypeForm()
+    return render(request, 'dashboard/add_class_type.html', {'form': form})
+
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def edit_class_type_view(request, pk):
+    class_type = get_object_or_404(ClassType, pk=pk)
+    if request.method == 'POST':
+        form = ClassTypeForm(request.POST, instance=class_type)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Class Type updated successfully!")
+            return redirect('dashboard:manage_class_types')
+    else:
+        form = ClassTypeForm(instance=class_type)
+    return render(request, 'dashboard/edit_class_type.html', {'form': form})
+
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def delete_class_type_view(request, pk):
+    class_type = get_object_or_404(ClassType, pk=pk)
+    class_type.delete()
+    messages.success(request, "Class Type deleted successfully!")
+    return redirect('dashboard:manage_class_types')
+
+# Schedule Management
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def manage_schedule_view(request, class_pk):
+    clazz = get_object_or_404(Clazz, pk=class_pk)
+    try:
+        schedule = clazz.schedule
+    except Schedule.DoesNotExist:
+        schedule = None
+
+    if request.method == 'POST':
+        if schedule:
+            form = ScheduleForm(request.POST, instance=schedule)
+        else:
+            form = ScheduleForm(request.POST)
+        
+        if form.is_valid():
+            schedule = form.save(commit=False)
+            schedule.clazz = clazz
+            schedule.save()
+            messages.success(request, "Schedule updated successfully!")
+            return redirect('dashboard:dashboard') # Redirect to dashboard or class list
+    else:
+        if schedule:
+            form = ScheduleForm(instance=schedule)
+        else:
+            form = ScheduleForm(initial={'clazz': clazz})
+            # Hide clazz field since we are setting it automatically, or make it read-only
+            form.fields['clazz'].widget = forms.HiddenInput()
+
+    return render(request, 'dashboard/manage_schedule.html', {'form': form, 'clazz': clazz})
+
+# Attendance Management
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def take_attendance_view(request, class_pk):
+    clazz = get_object_or_404(Clazz, pk=class_pk)
+    date_str = request.GET.get('date')
+    
+    if date_str:
+        try:
+            date = datetime.datetime.strptime(date_str, '%Y-%m-%d').date()
+        except ValueError:
+             date = datetime.date.today()
+    else:
+        date = datetime.date.today()
+        
+    enrollments = clazz.enrollments.all().select_related('student')
+    
+    if request.method == 'POST':
+        date_str_post = request.POST.get('date')
+        if date_str_post:
+             date = datetime.datetime.strptime(date_str_post, '%Y-%m-%d').date()
+
+        for enrollment in enrollments:
+            status = request.POST.get(f'status_{enrollment.pk}')
+            if status:
+                Attendance.objects.update_or_create(
+                    enrollment=enrollment,
+                    date=date,
+                    defaults={'status': status}
+                )
+        messages.success(request, f"Attendance recorded for {date}")
+        return redirect(f"{request.path}?date={date}")
+
+    # Prepare data for template
+    attendance_data = []
+    for enrollment in enrollments:
+        attendance = Attendance.objects.filter(enrollment=enrollment, date=date).first()
+        attendance_data.append({
+            'enrollment': enrollment,
+            'status': attendance.status if attendance else None
+        })
+        
+    return render(request, 'dashboard/take_attendance.html', {
+        'clazz': clazz,
+        'date': date,
+        'attendance_data': attendance_data
+    })

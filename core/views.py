@@ -1,6 +1,7 @@
-from django.shortcuts import render
-from .models import Clazz # <-- Import model Clazz
-from django.shortcuts import render, get_object_or_404
+from django.shortcuts import render, get_object_or_404, redirect
+from django.contrib.auth.decorators import login_required
+from django.contrib import messages
+from .models import Clazz, Student, Enrollment
 
 # Create your views here.
 def home(request):
@@ -39,3 +40,24 @@ def class_detail(request, pk):
         'enrollments': clazz.enrollments.all()
     }
     return render(request, 'core/class_detail.html', context)
+
+@login_required
+def enroll_student(request, class_id):
+    clazz = get_object_or_404(Clazz, pk=class_id)
+    
+    # Check if user is a student
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        messages.error(request, "Only students can enroll in classes.")
+        return redirect('class_detail', pk=class_id)
+
+    # Check if already enrolled
+    if Enrollment.objects.filter(student=student, clazz=clazz).exists():
+        messages.warning(request, "You are already enrolled in this class.")
+        return redirect('class_detail', pk=class_id)
+
+    # Create enrollment
+    Enrollment.objects.create(student=student, clazz=clazz)
+    messages.success(request, f"Successfully enrolled in {clazz.class_name}!")
+    return redirect('dashboard:student_dashboard')

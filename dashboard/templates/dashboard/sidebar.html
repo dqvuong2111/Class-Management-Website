@@ -34,6 +34,16 @@
             <i data-lucide="user-check" class="h-5 w-5"></i>
             Teachers
         </a>
+
+        <a href="{% url 'dashboard:manage_staff' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if 'staff' in request.path %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="briefcase" class="h-5 w-5"></i>
+            Staff
+        </a>
+
+        <a href="{% url 'dashboard:manage_class_types' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if 'class-types' in request.path %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="tags" class="h-5 w-5"></i>
+            Class Types
+        </a>
         
         <!-- Placeholder links for other features from giaovienai -->
         <a href="#" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors text-gray-600 hover:bg-gray-50 hover:text-gray-900">

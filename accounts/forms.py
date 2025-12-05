@@ -9,6 +9,13 @@ class SimpleSignUpForm(UserCreationForm):
     email = forms.EmailField(required=True)
     address = forms.CharField(max_length=255, required=True)
 
+    def __init__(self, *args, **kwargs):
+        super(SimpleSignUpForm, self).__init__(*args, **kwargs)
+        for field in self.fields:
+            self.fields[field].widget.attrs.update({
+                'class': 'form-control rounded-pill'
+            })
+
     class Meta:
         model = User
         fields = ("username", "full_name", "email", "dob", "phone_number", "address", "password1", "password2")
