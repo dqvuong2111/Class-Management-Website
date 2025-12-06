@@ -25,7 +25,11 @@ SECRET_KEY = 'django-insecure-#@hj9z4qqewyo*ultun&(%x^)n6bwt&-=-hkmzp)8%c7bg1@+d
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 
-ALLOWED_HOSTS = []
+ALLOWED_HOSTS = [
+    '127.0.0.1',  # Tên miền cục bộ
+    '.onrender.com', # Cho phép tất cả các tên miền phụ của Render
+    'classmanagementproject.onrender.com' # Tên miền cụ thể của bạn
+]
 
 
 # Application definition
