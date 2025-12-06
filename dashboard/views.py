@@ -10,6 +10,9 @@ from django.db.models import Count, Q
 def is_staff_user(user):
     return user.is_staff
 
+def is_teacher_or_staff(user):
+    return user.is_staff or hasattr(user, 'teacher')
+
 @login_required
 @user_passes_test(is_staff_user, login_url="accounts:login")
 def admin_dashboard_view(request):
@@ -39,6 +42,22 @@ def admin_dashboard_view(request):
         'pending_requests_count': pending_requests_count,
     }
     return render(request, 'dashboard/dashboard.html', context)
+
+@login_required
+def teacher_dashboard_view(request):
+    if not hasattr(request.user, 'teacher'):
+        messages.error(request, "Access denied. Teachers only.")
+        return redirect('home')
+    
+    teacher = request.user.teacher
+    classes = Clazz.objects.filter(teacher=teacher).annotate(
+        student_count=Count('enrollments', filter=Q(enrollments__status='approved'))
+    )
+    
+    return render(request, 'dashboard/teacher_dashboard.html', {
+        'teacher': teacher,
+        'classes': classes
+    })
 
 @login_required
 @user_passes_test(is_staff_user, login_url="accounts:login")
@@ -86,7 +105,7 @@ def student_dashboard_view(request):
         messages.error(request, "You are not registered as a student.")
         return redirect('home')
         
-    enrollments = student.enrollments.all()
+    enrollments = student.enrollments.filter(status='approved')
     return render(request, 'dashboard/student_dashboard.html', {
         'student': student,
         'enrollments': enrollments
@@ -99,7 +118,7 @@ def student_courses_view(request):
     except Student.DoesNotExist:
         messages.error(request, "You are not registered as a student.")
         return redirect('home')
-    enrollments = student.enrollments.all().select_related('clazz', 'clazz__class_type', 'clazz__teacher')
+    enrollments = student.enrollments.filter(status='approved').select_related('clazz', 'clazz__class_type', 'clazz__teacher')
     return render(request, 'dashboard/student_courses.html', {'student': student, 'enrollments': enrollments})
 
 @login_required
@@ -471,7 +490,7 @@ def manage_schedule_view(request, class_pk):
 
 # Attendance Management
 @login_required
-@user_passes_test(is_staff_user, login_url="accounts:login")
+@user_passes_test(is_teacher_or_staff, login_url="accounts:login")
 def take_attendance_view(request, class_pk):
     clazz = get_object_or_404(Clazz, pk=class_pk)
     date_str = request.GET.get('date')
@@ -511,8 +530,43 @@ def take_attendance_view(request, class_pk):
             'status': attendance.status if attendance else None
         })
         
+    base_template = 'dashboard/teacher_base_dashboard.html' if hasattr(request.user, 'teacher') else 'dashboard/base_dashboard.html'
+        
     return render(request, 'dashboard/take_attendance.html', {
         'clazz': clazz,
         'date': date,
-        'attendance_data': attendance_data
+        'attendance_data': attendance_data,
+        'base_template': base_template
+    })
+
+@login_required
+@user_passes_test(is_teacher_or_staff, login_url="accounts:login")
+def enter_grades_view(request, class_pk):
+    clazz = get_object_or_404(Clazz, pk=class_pk)
+    enrollments = clazz.enrollments.filter(status='approved').select_related('student')
+
+    if request.method == 'POST':
+        for enrollment in enrollments:
+            # Helper function to get float or None
+            def get_score(field_name):
+                val = request.POST.get(f'{field_name}_{enrollment.pk}')
+                return float(val) if val else None
+
+            enrollment.minitest1 = get_score('minitest1')
+            enrollment.minitest2 = get_score('minitest2')
+            enrollment.minitest3 = get_score('minitest3')
+            enrollment.minitest4 = get_score('minitest4')
+            enrollment.midterm = get_score('midterm')
+            enrollment.final_test = get_score('final_test')
+            enrollment.save()
+            
+        messages.success(request, f"Grades updated for {clazz.class_name}")
+        return redirect('dashboard:enter_grades', class_pk=class_pk)
+
+    base_template = 'dashboard/teacher_base_dashboard.html' if hasattr(request.user, 'teacher') else 'dashboard/base_dashboard.html'
+
+    return render(request, 'dashboard/enter_grades.html', {
+        'clazz': clazz,
+        'enrollments': enrollments,
+        'base_template': base_template
     })

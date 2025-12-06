@@ -7,7 +7,7 @@ class Person(models.Model):
     full_name = models.CharField(max_length=100)
     dob = models.DateField(verbose_name="Date of Birth")
     phone_number = models.CharField(max_length=15, verbose_name="Phone Number")
-    email = models.EmailField(unique=True)
+    email = models.EmailField(unique=False, verbose_name="Email Address")
     address = models.CharField(max_length=255, verbose_name="Address")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
@@ -17,6 +17,7 @@ class Person(models.Model):
 
 # Model for teachers
 class Teacher(Person):
+    user = models.OneToOneField(User, on_delete=models.CASCADE, null=True, blank=True)
     teacher_id = models.AutoField(primary_key=True)
     qualification = models.CharField(max_length=100, verbose_name="Qualification")
 

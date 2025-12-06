@@ -8,6 +8,10 @@ urlpatterns = [
     path('documents/', views.admin_documents_view, name='admin_documents'),
     path('statistics/', views.admin_statistics_view, name='admin_statistics'),
     path('', views.admin_dashboard_view, name='dashboard'),
+    
+    # Teacher Dashboard
+    path('teacher/', views.teacher_dashboard_view, name='teacher_dashboard'),
+
     path('student/', views.student_dashboard_view, name='student_dashboard'),
     path('student/courses/', views.student_courses_view, name='student_courses'),
     path('student/schedule/', views.student_schedule_view, name='student_schedule'),
@@ -20,6 +24,7 @@ urlpatterns = [
     path('delete_class/<int:pk>/', views.delete_class_view, name='delete_class'),
     path('class/<int:class_pk>/schedule/', views.manage_schedule_view, name='manage_schedule'),
     path('class/<int:class_pk>/attendance/', views.take_attendance_view, name='take_attendance'),
+    path('class/<int:class_pk>/grades/', views.enter_grades_view, name='enter_grades'),
 
     # Student Management
     path('students/', views.manage_students_view, name='manage_students'),
