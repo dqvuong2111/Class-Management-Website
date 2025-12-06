@@ -60,6 +60,9 @@
                         <td class="px-6 py-4 text-gray-600">{{ teacher.phone_number }}</td>
                         <td class="px-6 py-4 text-right">
                             <div class="flex items-center justify-end gap-2">
+                                <a href="{% url 'dashboard:assign_classes_teacher' teacher.pk %}" class="p-2 text-gray-400 hover:text-green-600 hover:bg-green-50 rounded-lg transition-colors" title="Assign Classes">
+                                    <i data-lucide="book-open" class="h-4 w-4"></i>
+                                </a>
                                 <a href="{% url 'dashboard:edit_teacher' teacher.pk %}" class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-lg transition-colors">
                                     <i data-lucide="edit-2" class="h-4 w-4"></i>
                                 </a>

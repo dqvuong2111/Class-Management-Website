@@ -295,6 +295,37 @@ def delete_teacher_view(request, pk):
     messages.success(request, "Teacher deleted successfully!")
     return redirect('dashboard:manage_teachers')
 
+@login_required
+@user_passes_test(is_staff_user, login_url="accounts:login")
+def assign_classes_to_teacher_view(request, pk):
+    teacher = get_object_or_404(Teacher, pk=pk)
+    if request.method == 'POST':
+        selected_class_ids = request.POST.getlist('classes')
+        
+        # 1. Unassign classes that were previously assigned but not selected anymore
+        # (Only if we want this behavior. It's safer to only ADD assignments, but "Assign Classes" usually implies "Manage Assignments")
+        # Let's assume we are managing the full set of classes for this teacher.
+        current_classes = Clazz.objects.filter(teacher=teacher)
+        for clazz in current_classes:
+            if str(clazz.pk) not in selected_class_ids:
+                clazz.teacher = None
+                clazz.save()
+        
+        # 2. Assign selected classes
+        for class_id in selected_class_ids:
+            clazz = get_object_or_404(Clazz, pk=class_id)
+            clazz.teacher = teacher
+            clazz.save()
+            
+        messages.success(request, f"Classes assigned to {teacher.full_name} successfully!")
+        return redirect('dashboard:manage_teachers')
+        
+    all_classes = Clazz.objects.all().order_by('class_name')
+    return render(request, 'dashboard/assign_classes_teacher.html', {
+        'teacher': teacher,
+        'all_classes': all_classes
+    })
+
 # Enrollment Management
 @login_required
 @user_passes_test(is_staff_user, login_url="accounts:login")

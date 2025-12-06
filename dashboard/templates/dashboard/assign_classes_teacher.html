@@ -1,0 +1,74 @@
+{% extends 'dashboard/base_dashboard.html' %}
+
+{% block content %}
+<div class="max-w-4xl mx-auto">
+    <div class="mb-8 flex justify-between items-center">
+        <div>
+            <h1 class="text-2xl font-bold text-gray-900">Assign Classes</h1>
+            <p class="text-gray-500">Select classes for teacher: <span class="font-semibold text-indigo-600">{{ teacher.full_name }}</span></p>
+        </div>
+        <a href="{% url 'dashboard:manage_teachers' %}" class="text-gray-500 hover:text-gray-700">
+            Cancel
+        </a>
+    </div>
+
+    <form method="post" class="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+        {% csrf_token %}
+        
+        <div class="p-4 border-b border-gray-200 bg-gray-50 flex justify-between items-center">
+            <span class="text-sm font-medium text-gray-700">Available Classes</span>
+            <span class="text-xs text-gray-500">Check to assign</span>
+        </div>
+
+        <div class="divide-y divide-gray-200 max-h-[600px] overflow-y-auto">
+            {% for clazz in all_classes %}
+            <label class="flex items-center p-4 hover:bg-gray-50 transition-colors cursor-pointer group">
+                <div class="flex items-center h-5">
+                    <input 
+                        type="checkbox" 
+                        name="classes" 
+                        value="{{ clazz.pk }}" 
+                        class="w-4 h-4 text-indigo-600 border-gray-300 rounded focus:ring-indigo-500"
+                        {% if clazz.teacher == teacher %}checked{% endif %}
+                    >
+                </div>
+                <div class="ml-4 flex-1">
+                    <div class="flex justify-between">
+                        <span class="font-medium text-gray-900">{{ clazz.class_name }}</span>
+                        <span class="text-xs font-medium px-2 py-0.5 rounded 
+                            {% if clazz.teacher == teacher %}bg-green-100 text-green-700
+                            {% elif clazz.teacher %}bg-amber-100 text-amber-700
+                            {% else %}bg-gray-100 text-gray-600{% endif %}">
+                            {% if clazz.teacher == teacher %}
+                                Assigned to this teacher
+                            {% elif clazz.teacher %}
+                                Assigned to {{ clazz.teacher.full_name }}
+                            {% else %}
+                                Unassigned
+                            {% endif %}
+                        </span>
+                    </div>
+                    <div class="text-sm text-gray-500 mt-1 flex gap-4">
+                        <span>{{ clazz.class_type.code }}</span>
+                        <span>{{ clazz.schedule.day_of_week|default:"No Schedule" }}</span>
+                    </div>
+                </div>
+            </label>
+            {% empty %}
+            <div class="p-8 text-center text-gray-500">
+                No classes found. <a href="{% url 'dashboard:add_class' %}" class="text-indigo-600 hover:underline">Create a class first</a>.
+            </div>
+            {% endfor %}
+        </div>
+
+        <div class="p-4 bg-gray-50 border-t border-gray-200 flex justify-end gap-3">
+            <a href="{% url 'dashboard:manage_teachers' %}" class="px-4 py-2 bg-white border border-gray-300 rounded-lg text-gray-700 font-medium hover:bg-gray-50 transition-colors">
+                Cancel
+            </a>
+            <button type="submit" class="px-4 py-2 bg-indigo-600 text-white rounded-lg font-medium hover:bg-indigo-700 transition-colors shadow-sm">
+                Save Assignments
+            </button>
+        </div>
+    </form>
+</div>
+{% endblock %}

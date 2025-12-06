@@ -36,6 +36,7 @@ urlpatterns = [
     path('teachers/', views.manage_teachers_view, name='manage_teachers'),
     path('teachers/add/', views.add_teacher_view, name='add_teacher'),
     path('teachers/edit/<int:pk>/', views.edit_teacher_view, name='edit_teacher'),
+    path('teachers/assign/<int:pk>/', views.assign_classes_to_teacher_view, name='assign_classes_teacher'),
     path('teachers/delete/<int:pk>/', views.delete_teacher_view, name='delete_teacher'),
 
     # Enrollment Management
