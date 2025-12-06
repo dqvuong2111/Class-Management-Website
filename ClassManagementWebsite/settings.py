@@ -11,7 +11,7 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
-
+import os
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
@@ -23,7 +23,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 SECRET_KEY = 'django-insecure-#@hj9z4qqewyo*ultun&(%x^)n6bwt&-=-hkmzp)8%c7bg1@+d'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.environ.get('DEBUG', 'False') == 'True'
 
 ALLOWED_HOSTS = [
     '127.0.0.1',  # Tên miền cục bộ
@@ -136,3 +136,13 @@ SESSION_EXPIRE_AT_BROWSER_CLOSE = True
 
 # Trigger reload
 
+
+RENDER_EXTERNAL_HOSTNAME = os.environ.get('WEB_HOST')
+
+if RENDER_EXTERNAL_HOSTNAME:
+    ALLOWED_HOSTS = [
+        RENDER_EXTERNAL_HOSTNAME,
+        '127.0.0.1',  # Luôn thêm localhost
+    ]
+else:
+    ALLOWED_HOSTS = ['127.0.0.1'] # Mặc định cho môi trường dev
