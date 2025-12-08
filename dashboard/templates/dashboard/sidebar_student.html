@@ -39,6 +39,10 @@
             <i data-lucide="award" class="h-5 w-5"></i>
             Grades & Achievements
         </a>
+        <a href="{% url 'dashboard:messages' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'messages' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="mail" class="h-5 w-5"></i>
+            Messages
+        </a>
 
         <div class="my-2 border-t border-gray-100"></div>
 

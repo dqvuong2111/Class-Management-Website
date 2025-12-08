@@ -1,0 +1,111 @@
+{% extends 'dashboard/base_dashboard.html' %} {# Use base_dashboard for both student/teacher #}
+{% load static %}
+
+{% block title %}Messages{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 space-y-6">
+    <h1 class="text-3xl font-bold text-gray-900">Messages</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+        <!-- New Message Form -->
+        <div class="md:col-span-1 bg-white rounded-xl shadow-sm border border-gray-200 p-6 h-fit">
+            <h2 class="text-xl font-bold text-gray-900 mb-4">Compose Message</h2>
+            <form method="post" class="space-y-4">
+                {% csrf_token %}
+                <div>
+                    <label for="{{ form.recipient_username.id_for_label }}" class="block text-sm font-medium text-gray-700">Recipient (Username)</label>
+                    {{ form.recipient_username }}
+                </div>
+                <div>
+                    <label for="{{ form.subject.id_for_label }}" class="block text-sm font-medium text-gray-700">Subject</label>
+                    {{ form.subject }}
+                </div>
+                <div>
+                    <label for="{{ form.body.id_for_label }}" class="block text-sm font-medium text-gray-700">Body</label>
+                    {{ form.body }}
+                </div>
+                <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                    Send Message
+                </button>
+            </form>
+        </div>
+
+        <!-- Message List -->
+        <div class="md:col-span-2 space-y-6">
+            <!-- Received Messages -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <h2 class="font-semibold text-gray-900 flex items-center gap-2">
+                        <i data-lucide="inbox" class="h-5 w-5 text-blue-500"></i>
+                        Received ({{ received.count }})
+                    </h2>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    {% for message in received %}
+                    <div class="p-4 hover:bg-gray-50 transition-colors cursor-pointer" onclick="toggleMessageBody('received-{{ message.pk }}')">
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="font-medium text-gray-900 {% if not message.is_read %}font-bold{% endif %}">{{ message.subject }}</h3>
+                            <span class="text-xs text-gray-500">{{ message.created_at|date:"M d, H:i" }}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-2">From: {{ message.sender.username }}</p>
+                        <div id="received-{{ message.pk }}" class="message-body hidden text-gray-700 text-sm whitespace-pre-wrap">
+                            {{ message.body }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-8 text-center text-gray-500 text-sm">
+                        No messages received.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+
+            <!-- Sent Messages -->
+            <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+                <div class="p-4 border-b border-gray-200 bg-gray-50 flex items-center justify-between">
+                    <h2 class="font-semibold text-gray-900 flex items-center gap-2">
+                        <i data-lucide="send" class="h-5 w-5 text-green-500"></i>
+                        Sent ({{ sent.count }})
+                    </h2>
+                </div>
+                <div class="divide-y divide-gray-100">
+                    {% for message in sent %}
+                    <div class="p-4 hover:bg-gray-50 transition-colors cursor-pointer" onclick="toggleMessageBody('sent-{{ message.pk }}')">
+                        <div class="flex justify-between items-center mb-1">
+                            <h3 class="font-medium text-gray-900">{{ message.subject }}</h3>
+                            <span class="text-xs text-gray-500">{{ message.created_at|date:"M d, H:i" }}</span>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-2">To: {{ message.recipient.username }}</p>
+                        <div id="sent-{{ message.pk }}" class="message-body hidden text-gray-700 text-sm whitespace-pre-wrap">
+                            {{ message.body }}
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="p-8 text-center text-gray-500 text-sm">
+                        No messages sent.
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+    function toggleMessageBody(id) {
+        var body = document.getElementById(id);
+        if (body.classList.contains('hidden')) {
+            body.classList.remove('hidden');
+            // Mark as read - this would typically be an AJAX call
+            // For now, just visually update (remove font-bold)
+            var subjectElement = body.previousElementSibling.previousElementSibling.querySelector('h3');
+            if (subjectElement && subjectElement.classList.contains('font-bold')) {
+                subjectElement.classList.remove('font-bold');
+            }
+        } else {
+            body.classList.add('hidden');
+        }
+    }
+</script>
+{% endblock %}

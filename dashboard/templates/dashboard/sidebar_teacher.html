@@ -23,13 +23,29 @@
             <i data-lucide="clipboard-list" class="h-5 w-5"></i>
             Assignments
         </a>
+        <a href="{% url 'dashboard:teacher_create_assignment' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'teacher_create_assignment' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="plus-circle" class="h-5 w-5"></i>
+            Create Assignment
+        </a>
         <a href="{% url 'dashboard:teacher_schedule' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'teacher_schedule' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
             <i data-lucide="calendar-check" class="h-5 w-5"></i>
             Schedule
         </a>
+        <a href="{% url 'dashboard:teacher_qr' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'teacher_qr' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="qr-code" class="h-5 w-5"></i>
+            QR Attendance
+        </a>
+        <a href="{% url 'dashboard:teacher_feedback' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'teacher_feedback' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="message-square" class="h-5 w-5"></i>
+            Student Feedback
+        </a>
         <a href="{% url 'dashboard:teacher_statistics' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'teacher_statistics' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
             <i data-lucide="bar-chart-2" class="h-5 w-5"></i>
             Statistics
+        </a>
+        <a href="{% url 'dashboard:messages' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'messages' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="mail" class="h-5 w-5"></i>
+            Messages
         </a>
 
         <!-- Add more links later if needed -->

@@ -1,0 +1,73 @@
+{% extends 'dashboard/teacher_base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Class Feedback{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 space-y-6">
+    <div class="flex items-center justify-between">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Student Feedback</h1>
+            <p class="text-gray-500">Reviews and ratings from your students</p>
+        </div>
+        <div class="flex gap-4">
+            <div class="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200">
+                <i data-lucide="star" class="h-5 w-5 text-yellow-500 fill-yellow-500"></i>
+                <span class="text-lg font-bold text-gray-900">{{ avg_teacher|default:"N/A" }}</span>
+                <span class="text-sm text-gray-500">Teacher Rating</span>
+            </div>
+            <div class="flex items-center gap-2 px-4 py-2 bg-white rounded-xl shadow-sm border border-gray-200">
+                <i data-lucide="book-check" class="h-5 w-5 text-indigo-500"></i>
+                <span class="text-lg font-bold text-gray-900">{{ avg_class|default:"N/A" }}</span>
+                <span class="text-sm text-gray-500">Class Rating</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-4 border-b border-gray-200 bg-gray-50">
+            <h2 class="font-semibold text-gray-900">Feedback Details</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-gray-600">
+                <thead class="bg-gray-50 text-gray-900 font-medium">
+                    <tr>
+                        <th class="p-4">Class</th>
+                        <th class="p-4">Student</th>
+                        <th class="p-4 text-center">Teacher Rate</th>
+                        <th class="p-4 text-center">Class Rate</th>
+                        <th class="p-4">Comment</th>
+                        <th class="p-4">Date</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-100">
+                    {% for feedback in feedbacks %}
+                    <tr class="hover:bg-gray-50 transition-colors">
+                        <td class="p-4 font-medium text-gray-900">{{ feedback.clazz.class_name }}</td>
+                        <td class="p-4 text-gray-700">{{ feedback.student.full_name }}</td>
+                        <td class="p-4 text-center">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
+                                {{ feedback.teacher_rate }}
+                            </span>
+                        </td>
+                        <td class="p-4 text-center">
+                            <span class="px-2 py-1 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800">
+                                {{ feedback.class_rate }}
+                            </span>
+                        </td>
+                        <td class="p-4 text-gray-600 max-w-xs overflow-hidden text-ellipsis whitespace-nowrap" title="{{ feedback.comment }}">
+                            {{ feedback.comment|default:"No comment provided." }}
+                        </td>
+                        <td class="p-4 text-gray-500">{{ feedback.created_at|date:"M d, Y" }}</td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="6" class="p-8 text-center text-gray-500">No feedback received yet.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

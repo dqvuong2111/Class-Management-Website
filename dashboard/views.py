@@ -4,9 +4,169 @@ from django.contrib import messages
 from django import forms
 import datetime
 import calendar
-from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance, Material, Announcement, Assignment, AssignmentSubmission
-from .forms import ClassForm, TeacherForm, StudentForm, StaffForm, EnrollmentForm, ClassTypeForm, ScheduleForm, AttendanceForm, MaterialForm, AnnouncementForm, AssignmentForm, AssignmentSubmissionForm, AssignmentGradingForm
+from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance, Material, Announcement, Assignment, AssignmentSubmission, Feedback, Message, AttendanceSession
+from .forms import ClassForm, TeacherForm, StudentForm, StaffForm, EnrollmentForm, ClassTypeForm, ScheduleForm, AttendanceForm, MaterialForm, AnnouncementForm, AssignmentForm, AssignmentSubmissionForm, AssignmentGradingForm, AssignmentCreateForm, FeedbackForm, MessageForm
 from django.db.models import Count, Q, Avg
+import uuid
+
+# ... (existing views)
+
+# --- New Features Views ---
+
+@login_required
+def teacher_create_assignment_view(request):
+    if not hasattr(request.user, 'teacher'):
+        messages.error(request, "Access denied. Teachers only.")
+        return redirect('home')
+    
+    teacher = request.user.teacher
+    if request.method == 'POST':
+        form = AssignmentCreateForm(request.POST, teacher=teacher)
+        if form.is_valid():
+            form.save()
+            messages.success(request, "Assignment created successfully!")
+            return redirect('dashboard:teacher_assignments')
+    else:
+        form = AssignmentCreateForm(teacher=teacher)
+    
+    return render(request, 'dashboard/teacher_create_assignment.html', {'form': form})
+
+@login_required
+def teacher_feedback_list_view(request):
+    if not hasattr(request.user, 'teacher'):
+        return redirect('home')
+    
+    teacher = request.user.teacher
+    feedbacks = Feedback.objects.filter(teacher=teacher).select_related('clazz').order_by('-created_at')
+    
+    # Calculate averages
+    avg_teacher = feedbacks.aggregate(Avg('teacher_rate'))['teacher_rate__avg']
+    avg_class = feedbacks.aggregate(Avg('class_rate'))['class_rate__avg']
+    
+    return render(request, 'dashboard/teacher_feedback_list.html', {
+        'feedbacks': feedbacks,
+        'avg_teacher': round(avg_teacher, 1) if avg_teacher else 0,
+        'avg_class': round(avg_class, 1) if avg_class else 0,
+    })
+
+@login_required
+def student_give_feedback_view(request, class_pk):
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        return redirect('home')
+        
+    clazz = get_object_or_404(Clazz, pk=class_pk)
+    if not Enrollment.objects.filter(student=student, clazz=clazz, status='approved').exists():
+        messages.error(request, "You are not enrolled in this class.")
+        return redirect('dashboard:student_courses')
+        
+    # Check if already submitted
+    if Feedback.objects.filter(student=student, clazz=clazz).exists():
+        messages.info(request, "You have already submitted feedback for this class.")
+        return redirect('dashboard:student_class_detail', class_pk=class_pk)
+
+    if request.method == 'POST':
+        form = FeedbackForm(request.POST)
+        if form.is_valid():
+            feedback = form.save(commit=False)
+            feedback.student = student
+            feedback.clazz = clazz
+            feedback.teacher = clazz.teacher
+            feedback.save()
+            messages.success(request, "Feedback submitted successfully!")
+            return redirect('dashboard:student_class_detail', class_pk=class_pk)
+    else:
+        form = FeedbackForm()
+        
+    return render(request, 'dashboard/student_give_feedback.html', {'form': form, 'clazz': clazz})
+
+@login_required
+def teacher_qr_generate_view(request):
+    if not hasattr(request.user, 'teacher'):
+        return redirect('home')
+    
+    teacher = request.user.teacher
+    today = datetime.date.today()
+    
+    # Get today's classes
+    # (Simplified logic: showing all active classes for selection, or could filter by schedule)
+    classes = Clazz.objects.filter(teacher=teacher, start_date__lte=today, end_date__gte=today)
+    
+    qr_data = None
+    selected_class = None
+    
+    if request.method == 'POST':
+        class_id = request.POST.get('class_id')
+        selected_class = get_object_or_404(Clazz, pk=class_id, teacher=teacher)
+        
+        # Generate or get session
+        session, created = AttendanceSession.objects.get_or_create(
+            clazz=selected_class,
+            date=today,
+            defaults={'token': str(uuid.uuid4())}
+        )
+        # Build URL for students to scan
+        # In prod this would be full domain
+        qr_data = request.build_absolute_uri(f"/dashboard/student/qr/scan/{session.token}/")
+        
+    return render(request, 'dashboard/teacher_qr_generate.html', {
+        'classes': classes,
+        'qr_data': qr_data,
+        'selected_class': selected_class
+    })
+
+@login_required
+def student_qr_scan_view(request, token):
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        messages.error(request, "Student account required.")
+        return redirect('accounts:login')
+        
+    session = get_object_or_404(AttendanceSession, token=token)
+    
+    if not session.is_active:
+        messages.error(request, "This QR code has expired.")
+        return redirect('dashboard:student_dashboard')
+        
+    # Check enrollment
+    enrollment = get_object_or_404(Enrollment, student=student, clazz=session.clazz, status='approved')
+    
+    # Mark Present
+    Attendance.objects.update_or_create(
+        enrollment=enrollment,
+        date=session.date,
+        defaults={'status': 'Present'}
+    )
+    
+    messages.success(request, f"Attendance marked Present for {session.clazz.class_name} on {session.date}")
+    return redirect('dashboard:student_dashboard')
+
+@login_required
+def messages_view(request):
+    # Unified view for both teachers and students
+    user = request.user
+    received = Message.objects.filter(recipient=user).order_by('-created_at')
+    sent = Message.objects.filter(sender=user).order_by('-created_at')
+    
+    if request.method == 'POST':
+        form = MessageForm(request.POST)
+        if form.is_valid():
+            msg = form.save(commit=False)
+            msg.sender = user
+            msg.recipient = form.cleaned_data['recipient_username'] # This is the User object from clean method
+            msg.save()
+            messages.success(request, "Message sent!")
+            return redirect('dashboard:messages')
+    else:
+        form = MessageForm()
+        
+    return render(request, 'dashboard/messages.html', {
+        'received': received,
+        'sent': sent,
+        'form': form
+    })
 
 def is_staff_user(user):
     return user.is_staff

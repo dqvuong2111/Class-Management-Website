@@ -1,0 +1,39 @@
+{% extends 'dashboard/student_base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Give Feedback for {{ clazz.class_name }}{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 max-w-2xl space-y-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Give Feedback for "{{ clazz.class_name }}"</h1>
+            <p class="text-gray-500">Your anonymous feedback helps us improve.</p>
+        </div>
+        <a href="{% url 'dashboard:student_class_detail' clazz.pk %}" class="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors text-sm font-medium">
+            <i data-lucide="arrow-left" class="h-4 w-4"></i> Back to Class
+        </a>
+    </div>
+
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-6">
+        <form method="post" class="space-y-4">
+            {% csrf_token %}
+            <div>
+                <label for="{{ form.teacher_rate.id_for_label }}" class="block text-sm font-medium text-gray-700">Rate Teacher (1-10)</label>
+                {{ form.teacher_rate }}
+            </div>
+            <div>
+                <label for="{{ form.class_rate.id_for_label }}" class="block text-sm font-medium text-gray-700">Rate Class (1-10)</label>
+                {{ form.class_rate }}
+            </div>
+            <div>
+                <label for="{{ form.comment.id_for_label }}" class="block text-sm font-medium text-gray-700">Comments (Optional)</label>
+                {{ form.comment }}
+            </div>
+            <button type="submit" class="w-full bg-indigo-600 text-white px-4 py-2 rounded-lg hover:bg-indigo-700 transition-colors">
+                Submit Feedback
+            </button>
+        </form>
+    </div>
+</div>
+{% endblock %}

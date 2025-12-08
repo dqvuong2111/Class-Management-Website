@@ -139,6 +139,7 @@ class Feedback(models.Model):
     clazz = models.ForeignKey(Clazz, on_delete=models.CASCADE, related_name="feedbacks", verbose_name="Class")
     teacher_rate = models.DecimalField(max_digits=3, decimal_places=2, verbose_name="Teacher Rating", help_text="Rating from 1-10")
     class_rate = models.DecimalField(max_digits=3, decimal_places=2, verbose_name="Class Rating", help_text="Rating from 1-10")
+    comment = models.TextField(blank=True, verbose_name="Comment")
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
 
@@ -148,6 +149,33 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"Feedback by {self.student.full_name} for {self.teacher.full_name} in {self.clazz.class_name}"
+
+# Model for Internal Messages
+class Message(models.Model):
+    sender = models.ForeignKey(User, on_delete=models.CASCADE, related_name="sent_messages", verbose_name="Sender")
+    recipient = models.ForeignKey(User, on_delete=models.CASCADE, related_name="received_messages", verbose_name="Recipient")
+    subject = models.CharField(max_length=255, verbose_name="Subject")
+    body = models.TextField(verbose_name="Body")
+    is_read = models.BooleanField(default=False, verbose_name="Is Read")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    class Meta:
+        ordering = ['-created_at']
+
+    def __str__(self):
+        return f"From {self.sender.username} to {self.recipient.username}: {self.subject}"
+
+# Model for QR Code Attendance Sessions
+class AttendanceSession(models.Model):
+    session_id = models.AutoField(primary_key=True)
+    clazz = models.ForeignKey(Clazz, on_delete=models.CASCADE, related_name="attendance_sessions", verbose_name="Class")
+    date = models.DateField(default=timezone.now, verbose_name="Date")
+    token = models.CharField(max_length=64, unique=True, verbose_name="Session Token")
+    is_active = models.BooleanField(default=True, verbose_name="Is Active")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"QR Session for {self.clazz.class_name} on {self.date}"
 
 # Model for Class Materials
 class Material(models.Model):

@@ -1,5 +1,5 @@
 from django import forms
-from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance, Material, Announcement, Assignment, AssignmentSubmission
+from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance, Material, Announcement, Assignment, AssignmentSubmission, Message, Feedback
 
 class BootstrapFormMixin:
     def __init__(self, *args, **kwargs):
@@ -9,6 +9,53 @@ class BootstrapFormMixin:
                 field.widget.attrs['class'] = 'form-check-input'
             else:
                 field.widget.attrs['class'] = 'form-control'
+# ... (rest of imports)
+
+class AssignmentCreateForm(BootstrapFormMixin, forms.ModelForm):
+    clazz = forms.ModelChoiceField(queryset=Clazz.objects.none(), label="Class")
+
+    class Meta:
+        model = Assignment
+        fields = ['title', 'description', 'due_date', 'clazz']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'due_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        teacher = kwargs.pop('teacher', None)
+        super().__init__(*args, **kwargs)
+        if teacher:
+            self.fields['clazz'].queryset = Clazz.objects.filter(teacher=teacher)
+
+class MessageForm(BootstrapFormMixin, forms.ModelForm):
+    recipient_username = forms.CharField(label="Recipient Username")
+
+    class Meta:
+        model = Message
+        fields = ['recipient_username', 'subject', 'body']
+        widgets = {
+            'body': forms.Textarea(attrs={'rows': 4}),
+        }
+    
+    def clean_recipient_username(self):
+        username = self.cleaned_data['recipient_username']
+        from django.contrib.auth.models import User
+        try:
+            user = User.objects.get(username=username)
+            return user
+        except User.DoesNotExist:
+            raise forms.ValidationError("User not found.")
+
+class FeedbackForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Feedback
+        fields = ['teacher_rate', 'class_rate', 'comment']
+        widgets = {
+            'comment': forms.Textarea(attrs={'rows': 3}),
+            'teacher_rate': forms.NumberInput(attrs={'min': 1, 'max': 10}),
+            'class_rate': forms.NumberInput(attrs={'min': 1, 'max': 10}),
+        }
 
 class ClassForm(BootstrapFormMixin, forms.ModelForm):
     class Meta:
@@ -107,4 +154,50 @@ class AssignmentGradingForm(BootstrapFormMixin, forms.ModelForm):
         fields = ['grade', 'feedback']
         widgets = {
             'feedback': forms.Textarea(attrs={'rows': 2}),
+        }
+
+class AssignmentCreateForm(BootstrapFormMixin, forms.ModelForm):
+    clazz = forms.ModelChoiceField(queryset=Clazz.objects.none(), label="Class")
+
+    class Meta:
+        model = Assignment
+        fields = ['title', 'description', 'due_date', 'clazz']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'due_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+
+    def __init__(self, *args, **kwargs):
+        teacher = kwargs.pop('teacher', None)
+        super().__init__(*args, **kwargs)
+        if teacher:
+            self.fields['clazz'].queryset = Clazz.objects.filter(teacher=teacher)
+
+class MessageForm(BootstrapFormMixin, forms.ModelForm):
+    recipient_username = forms.CharField(label="Recipient Username")
+
+    class Meta:
+        model = Message
+        fields = ['recipient_username', 'subject', 'body']
+        widgets = {
+            'body': forms.Textarea(attrs={'rows': 4}),
+        }
+    
+    def clean_recipient_username(self):
+        username = self.cleaned_data['recipient_username']
+        from django.contrib.auth.models import User
+        try:
+            user = User.objects.get(username=username)
+            return user
+        except User.DoesNotExist:
+            raise forms.ValidationError("User not found.")
+
+class FeedbackForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Feedback
+        fields = ['teacher_rate', 'class_rate', 'comment']
+        widgets = {
+            'comment': forms.Textarea(attrs={'rows': 3}),
+            'teacher_rate': forms.NumberInput(attrs={'min': 1, 'max': 10}),
+            'class_rate': forms.NumberInput(attrs={'min': 1, 'max': 10}),
         }

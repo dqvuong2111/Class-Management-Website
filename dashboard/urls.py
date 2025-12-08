@@ -12,8 +12,13 @@ urlpatterns = [
     # Teacher Dashboard
     path('teacher/', views.teacher_dashboard_view, name='teacher_dashboard'),
     path('teacher/assignments/', views.teacher_assignments_view, name='teacher_assignments'),
+    path('teacher/assignments/create/', views.teacher_create_assignment_view, name='teacher_create_assignment'),
     path('teacher/schedule/', views.teacher_schedule_view, name='teacher_schedule'),
     path('teacher/statistics/', views.teacher_statistics_view, name='teacher_statistics'),
+    path('teacher/feedback/', views.teacher_feedback_list_view, name='teacher_feedback'),
+    path('teacher/qr/', views.teacher_qr_generate_view, name='teacher_qr'),
+    path('messages/', views.messages_view, name='messages'),
+
     path('teacher/class/<int:class_pk>/', views.teacher_class_detail_view, name='teacher_class_detail'),
     path('teacher/material/delete/<int:pk>/', views.delete_material_view, name='delete_material'),
     path('teacher/announcement/delete/<int:pk>/', views.delete_announcement_view, name='delete_announcement'),
@@ -24,7 +29,9 @@ urlpatterns = [
     path('student/', views.student_dashboard_view, name='student_dashboard'),
     path('student/courses/', views.student_courses_view, name='student_courses'),
     path('student/class/<int:class_pk>/', views.student_class_detail_view, name='student_class_detail'),
+    path('student/class/<int:class_pk>/feedback/', views.student_give_feedback_view, name='student_give_feedback'),
     path('student/assignment/<int:assignment_pk>/submit/', views.student_submit_assignment_view, name='student_submit_assignment'),
+    path('student/qr/scan/<str:token>/', views.student_qr_scan_view, name='student_qr_scan'),
     path('student/schedule/', views.student_schedule_view, name='student_schedule'),
     path('student/pending/', views.student_pending_requests_view, name='student_pending'),
     path('student/achievements/', views.student_achievements_view, name='student_achievements'),
