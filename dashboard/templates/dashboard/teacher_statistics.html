@@ -1,0 +1,168 @@
+{% extends 'dashboard/teacher_base_dashboard.html' %}
+{% load static %}
+
+{% block title %}Teacher Statistics{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 space-y-8">
+    <h1 class="text-3xl font-bold text-gray-900">Detailed Statistics</h1>
+    
+    <!-- Overview Cards -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-blue-100 rounded-lg text-blue-600">
+                    <i data-lucide="book-open" class="h-6 w-6"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Total Classes</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ overview.total_classes }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-indigo-100 rounded-lg text-indigo-600">
+                    <i data-lucide="users" class="h-6 w-6"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Total Students</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ overview.total_students }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-purple-100 rounded-lg text-purple-600">
+                    <i data-lucide="calendar-check-2" class="h-6 w-6"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Working Days (Month)</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ overview.working_days }}</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-green-100 rounded-lg text-green-600">
+                    <i data-lucide="check-circle" class="h-6 w-6"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Avg. Attendance</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ overview.avg_attendance_rate }}%</p>
+                </div>
+            </div>
+        </div>
+        <div class="bg-white p-6 rounded-xl shadow-sm border border-gray-200">
+            <div class="flex items-center gap-4">
+                <div class="p-3 bg-yellow-100 rounded-lg text-yellow-600">
+                    <i data-lucide="award" class="h-6 w-6"></i>
+                </div>
+                <div>
+                    <p class="text-sm font-medium text-gray-500">Avg. Grade</p>
+                    <p class="text-2xl font-bold text-gray-900">{{ overview.avg_grade }}</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Class Performance Table -->
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+        <div class="p-6 border-b border-gray-200">
+            <h2 class="text-lg font-semibold text-gray-900">Class Performance Breakdown</h2>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm text-gray-600">
+                <thead class="bg-gray-50 text-xs uppercase font-medium text-gray-500">
+                    <tr>
+                        <th class="px-6 py-4">Class Name</th>
+                        <th class="px-6 py-4 text-center">Students</th>
+                        <th class="px-6 py-4 text-center">Attendance Rate</th>
+                        <th class="px-6 py-4 text-center">Avg. Grade</th>
+                        <th class="px-6 py-4">Grade Distribution</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for stat in class_stats %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-gray-900">{{ stat.class_name }}</td>
+                        <td class="px-6 py-4 text-center">{{ stat.student_count }}</td>
+                        <td class="px-6 py-4 text-center">
+                            <span class="px-2 py-1 rounded text-xs font-medium 
+                                {% if stat.attendance_rate >= 90 %}bg-green-100 text-green-800
+                                {% elif stat.attendance_rate >= 75 %}bg-yellow-100 text-yellow-800
+                                {% else %}bg-red-100 text-red-800{% endif %}">
+                                {{ stat.attendance_rate }}%
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-center font-semibold text-gray-900">{{ stat.avg_grade }}</td>
+                        <td class="px-6 py-4">
+                            <div class="flex items-end gap-1 h-8">
+                                <div class="w-4 bg-green-500 rounded-t" style="height: {{ stat.grade_dist.A|default:0 }}0%; max-height: 100%;" title="A: {{ stat.grade_dist.A }}"></div>
+                                <div class="w-4 bg-blue-500 rounded-t" style="height: {{ stat.grade_dist.B|default:0 }}0%; max-height: 100%;" title="B: {{ stat.grade_dist.B }}"></div>
+                                <div class="w-4 bg-yellow-500 rounded-t" style="height: {{ stat.grade_dist.C|default:0 }}0%; max-height: 100%;" title="C: {{ stat.grade_dist.C }}"></div>
+                                <div class="w-4 bg-orange-500 rounded-t" style="height: {{ stat.grade_dist.D|default:0 }}0%; max-height: 100%;" title="D: {{ stat.grade_dist.D }}"></div>
+                                <div class="w-4 bg-red-500 rounded-t" style="height: {{ stat.grade_dist.F|default:0 }}0%; max-height: 100%;" title="F: {{ stat.grade_dist.F }}"></div>
+                            </div>
+                            <div class="flex gap-1 text-[10px] text-gray-400 mt-1">
+                                <span class="w-4 text-center">A</span>
+                                <span class="w-4 text-center">B</span>
+                                <span class="w-4 text-center">C</span>
+                                <span class="w-4 text-center">D</span>
+                                <span class="w-4 text-center">F</span>
+                            </div>
+                        </td>
+                    </tr>
+                    {% empty %}
+                    <tr>
+                        <td colspan="5" class="px-6 py-8 text-center text-gray-500">No classes found.</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+
+    <!-- Students At Risk -->
+    {% if students_at_risk %}
+    <div class="bg-white rounded-xl shadow-sm border border-red-200 overflow-hidden">
+        <div class="p-6 border-b border-red-100 bg-red-50">
+            <h2 class="text-lg font-semibold text-red-800 flex items-center gap-2">
+                <i data-lucide="alert-triangle" class="h-5 w-5"></i>
+                Students At Risk
+            </h2>
+            <p class="text-sm text-red-600 mt-1">Students with low attendance (< 70%) or failing grades (< 5.0)</p>
+        </div>
+        <div class="overflow-x-auto">
+            <table class="w-full text-left text-sm">
+                <thead class="bg-gray-50 text-xs uppercase font-medium text-gray-500">
+                    <tr>
+                        <th class="px-6 py-4">Student Name</th>
+                        <th class="px-6 py-4">Class</th>
+                        <th class="px-6 py-4">Issues Identified</th>
+                        <th class="px-6 py-4 text-right">Action</th>
+                    </tr>
+                </thead>
+                <tbody class="divide-y divide-gray-200">
+                    {% for student in students_at_risk %}
+                    <tr class="hover:bg-gray-50">
+                        <td class="px-6 py-4 font-medium text-gray-900">{{ student.student_name }}</td>
+                        <td class="px-6 py-4 text-gray-600">{{ student.class_name }}</td>
+                        <td class="px-6 py-4">
+                            <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-red-100 text-red-800">
+                                {{ student.reasons }}
+                            </span>
+                        </td>
+                        <td class="px-6 py-4 text-right">
+                            <button class="text-indigo-600 hover:text-indigo-900 text-sm font-medium">Contact</button>
+                        </td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+</div>
+{% endblock %}

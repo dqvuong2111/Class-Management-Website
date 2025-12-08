@@ -1,0 +1,140 @@
+{% extends 'dashboard/teacher_base_dashboard.html' %}
+{% load static %}
+
+{% block title %}{{ student.full_name }} - Deep Dive{% endblock %}
+
+{% block content %}
+<div class="container mx-auto p-6 space-y-6">
+    <!-- Header -->
+    <div class="flex items-center justify-between">
+        <div class="flex items-center gap-4">
+            <a href="{% url 'dashboard:teacher_class_detail' clazz.pk %}" class="p-2 hover:bg-gray-100 rounded-lg text-gray-500 transition-colors">
+                <i data-lucide="arrow-left" class="h-6 w-6"></i>
+            </a>
+            <div>
+                <h1 class="text-2xl font-bold text-gray-900">{{ student.full_name }}</h1>
+                <p class="text-gray-500">{{ clazz.class_name }} | {{ clazz.class_type.code }}</p>
+            </div>
+        </div>
+        <div class="flex gap-2">
+            <span class="px-3 py-1 bg-indigo-100 text-indigo-700 rounded-full text-sm font-medium">
+                {{ enrollment.status|title }}
+            </span>
+            {% if enrollment.is_paid %}
+            <span class="px-3 py-1 bg-green-100 text-green-700 rounded-full text-sm font-medium">
+                Paid
+            </span>
+            {% else %}
+            <span class="px-3 py-1 bg-red-100 text-red-700 rounded-full text-sm font-medium">
+                Unpaid
+            </span>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-6">
+        
+        <!-- Attendance Stats -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <h2 class="font-semibold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="calendar-days" class="h-5 w-5 text-indigo-500"></i>
+                    Attendance Overview
+                </h2>
+            </div>
+            <div class="p-6">
+                <div class="flex items-center justify-center mb-6">
+                    <div class="relative h-32 w-32">
+                        <svg class="h-full w-full" viewBox="0 0 36 36">
+                            <!-- Background Circle -->
+                            <path class="text-gray-100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="4" />
+                            <!-- Progress Circle -->
+                            <path class="text-indigo-600" stroke-dasharray="{{ attendance_stats.rate }}, 100" d="M18 2.0845 a 15.9155 15.9155 0 0 1 0 31.831 a 15.9155 15.9155 0 0 1 0 -31.831" fill="none" stroke="currentColor" stroke-width="4" />
+                        </svg>
+                        <div class="absolute inset-0 flex items-center justify-center flex-col">
+                            <span class="text-2xl font-bold text-gray-900">{{ attendance_stats.rate }}%</span>
+                            <span class="text-xs text-gray-500">Present</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="grid grid-cols-3 gap-4 text-center">
+                    <div class="p-3 bg-green-50 rounded-lg">
+                        <div class="text-lg font-bold text-green-700">{{ attendance_stats.Present }}</div>
+                        <div class="text-xs text-green-600">Present</div>
+                    </div>
+                    <div class="p-3 bg-red-50 rounded-lg">
+                        <div class="text-lg font-bold text-red-700">{{ attendance_stats.Absent }}</div>
+                        <div class="text-xs text-red-600">Absent</div>
+                    </div>
+                    <div class="p-3 bg-yellow-50 rounded-lg">
+                        <div class="text-lg font-bold text-yellow-700">{{ attendance_stats.Excused }}</div>
+                        <div class="text-xs text-yellow-600">Excused</div>
+                    </div>
+                </div>
+                
+                <div class="mt-6 border-t border-gray-100 pt-4">
+                    <h3 class="text-sm font-medium text-gray-700 mb-3">Recent History</h3>
+                    <div class="space-y-2 max-h-48 overflow-y-auto pr-2 custom-scrollbar">
+                        {% for record in attendances %}
+                        <div class="flex justify-between items-center text-sm">
+                            <span class="text-gray-600">{{ record.date|date:"D, M d" }}</span>
+                            <span class="px-2 py-0.5 rounded text-xs font-medium 
+                                {% if record.status == 'Present' %}bg-green-100 text-green-700
+                                {% elif record.status == 'Absent' %}bg-red-100 text-red-700
+                                {% else %}bg-yellow-100 text-yellow-700{% endif %}">
+                                {{ record.status }}
+                            </span>
+                        </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Grade Chart -->
+        <div class="bg-white rounded-xl shadow-sm border border-gray-200 overflow-hidden">
+            <div class="p-6 border-b border-gray-200 bg-gray-50">
+                <h2 class="font-semibold text-gray-900 flex items-center gap-2">
+                    <i data-lucide="bar-chart-2" class="h-5 w-5 text-indigo-500"></i>
+                    Academic Performance
+                </h2>
+            </div>
+            <div class="p-6">
+                <div class="space-y-4">
+                    {% for exam, score in grades.items %}
+                    <div>
+                        <div class="flex justify-between text-sm mb-1">
+                            <span class="font-medium text-gray-700">{{ exam }}</span>
+                            <span class="font-bold {% if score >= 8.5 %}text-green-600{% elif score >= 5 %}text-indigo-600{% elif score is not None %}text-red-600{% else %}text-gray-400{% endif %}">
+                                {{ score|default:"--" }}
+                            </span>
+                        </div>
+                        <div class="w-full bg-gray-100 rounded-full h-2.5">
+                            {% if score is not None %}
+                            <div class="bg-indigo-600 h-2.5 rounded-full" style="width: {% widthratio score 10 100 %}%"></div>
+                            {% else %}
+                            <div class="bg-gray-200 h-2.5 rounded-full" style="width: 0%"></div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+                
+                <div class="mt-8 p-4 bg-indigo-50 rounded-lg">
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-indigo-900">Final Result Prediction</span>
+                        <span class="text-lg font-bold text-indigo-700">
+                            {% if enrollment.final_test %}
+                                {{ enrollment.final_test }}
+                            {% else %}
+                                Pending
+                            {% endif %}
+                        </span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </div>
+</div>
+{% endblock %}

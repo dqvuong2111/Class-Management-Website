@@ -1,5 +1,5 @@
 from django import forms
-from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance
+from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance, Material, Announcement, Assignment, AssignmentSubmission
 
 class BootstrapFormMixin:
     def __init__(self, *args, **kwargs):
@@ -72,4 +72,39 @@ class AttendanceForm(BootstrapFormMixin, forms.ModelForm):
         fields = '__all__'
         widgets = {
             'date': forms.DateInput(attrs={'type': 'date'}),
+        }
+
+class MaterialForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Material
+        fields = ['title', 'file']
+
+class AnnouncementForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Announcement
+        fields = ['title', 'content']
+        widgets = {
+            'content': forms.Textarea(attrs={'rows': 4}),
+        }
+
+class AssignmentForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = Assignment
+        fields = ['title', 'description', 'due_date']
+        widgets = {
+            'description': forms.Textarea(attrs={'rows': 4}),
+            'due_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+        }
+
+class AssignmentSubmissionForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = AssignmentSubmission
+        fields = ['submission_file']
+
+class AssignmentGradingForm(BootstrapFormMixin, forms.ModelForm):
+    class Meta:
+        model = AssignmentSubmission
+        fields = ['grade', 'feedback']
+        widgets = {
+            'feedback': forms.Textarea(attrs={'rows': 2}),
         }

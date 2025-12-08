@@ -19,6 +19,18 @@
             <i data-lucide="layout-dashboard" class="h-5 w-5"></i>
             My Classes
         </a>
+        <a href="{% url 'dashboard:teacher_assignments' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'teacher_assignments' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="clipboard-list" class="h-5 w-5"></i>
+            Assignments
+        </a>
+        <a href="{% url 'dashboard:teacher_schedule' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'teacher_schedule' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="calendar-check" class="h-5 w-5"></i>
+            Schedule
+        </a>
+        <a href="{% url 'dashboard:teacher_statistics' %}" class="flex items-center gap-3 rounded-xl px-4 py-3 text-sm font-medium transition-colors {% if request.resolver_match.url_name == 'teacher_statistics' %}bg-indigo-50 text-indigo-600{% else %}text-gray-600 hover:bg-gray-50 hover:text-gray-900{% endif %}">
+            <i data-lucide="bar-chart-2" class="h-5 w-5"></i>
+            Statistics
+        </a>
 
         <!-- Add more links later if needed -->
 

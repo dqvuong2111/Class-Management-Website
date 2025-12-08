@@ -43,22 +43,31 @@
                     <tbody class="divide-y divide-gray-200">
                         {% for item in attendance_data %}
                         <tr class="hover:bg-gray-50 transition-colors">
-                            <td class="px-6 py-4 font-medium text-gray-900">
+                            <td class="px-6 py-6 font-medium text-lg text-gray-900">
                                 {{ item.enrollment.student.full_name }}
                             </td>
-                            <td class="px-6 py-4 text-center">
-                                <input type="radio" name="status_{{ item.enrollment.pk }}" value="Present" class="text-indigo-600 focus:ring-indigo-500" {% if item.status == 'Present' or not item.status %}checked{% endif %}>
+                            <td class="px-6 py-6 text-center">
+                                <label class="cursor-pointer inline-flex items-center justify-center p-3 rounded-lg hover:bg-green-50 transition-colors">
+                                    <input type="radio" name="status_{{ item.enrollment.pk }}" value="Present" class="h-6 w-6 text-green-600 focus:ring-green-500 border-gray-300" {% if item.status == 'Present' or not item.status %}checked{% endif %}>
+                                    <span class="ml-2 text-green-700 font-medium hidden sm:inline">Present</span>
+                                </label>
                             </td>
-                            <td class="px-6 py-4 text-center">
-                                <input type="radio" name="status_{{ item.enrollment.pk }}" value="Absent" class="text-red-600 focus:ring-red-500" {% if item.status == 'Absent' %}checked{% endif %}>
+                            <td class="px-6 py-6 text-center">
+                                <label class="cursor-pointer inline-flex items-center justify-center p-3 rounded-lg hover:bg-red-50 transition-colors">
+                                    <input type="radio" name="status_{{ item.enrollment.pk }}" value="Absent" class="h-6 w-6 text-red-600 focus:ring-red-500 border-gray-300" {% if item.status == 'Absent' %}checked{% endif %}>
+                                    <span class="ml-2 text-red-700 font-medium hidden sm:inline">Absent</span>
+                                </label>
                             </td>
-                            <td class="px-6 py-4 text-center">
-                                <input type="radio" name="status_{{ item.enrollment.pk }}" value="Excused" class="text-amber-600 focus:ring-amber-500" {% if item.status == 'Excused' %}checked{% endif %}>
+                            <td class="px-6 py-6 text-center">
+                                <label class="cursor-pointer inline-flex items-center justify-center p-3 rounded-lg hover:bg-amber-50 transition-colors">
+                                    <input type="radio" name="status_{{ item.enrollment.pk }}" value="Excused" class="h-6 w-6 text-amber-600 focus:ring-amber-500 border-gray-300" {% if item.status == 'Excused' %}checked{% endif %}>
+                                    <span class="ml-2 text-amber-700 font-medium hidden sm:inline">Excused</span>
+                                </label>
                             </td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="4" class="px-6 py-8 text-center text-gray-500">
+                            <td colspan="4" class="px-6 py-12 text-center text-gray-500 text-lg">
                                 No students enrolled in this class.
                             </td>
                         </tr>
@@ -68,8 +77,8 @@
             </div>
             
             {% if attendance_data %}
-            <div class="p-4 border-t border-gray-200 bg-gray-50 flex justify-end">
-                <button type="submit" class="px-6 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 font-medium transition-colors shadow-sm">
+            <div class="p-6 border-t border-gray-200 bg-gray-50 flex justify-end sticky bottom-0 z-10">
+                <button type="submit" class="px-8 py-4 bg-indigo-600 text-white text-lg rounded-xl hover:bg-indigo-700 font-bold transition-transform transform hover:scale-105 shadow-md">
                     Save Attendance
                 </button>
             </div>

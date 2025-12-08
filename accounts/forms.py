@@ -36,10 +36,10 @@ class SimpleSignUpForm(UserCreationForm):
 
     def clean_email(self):
         email = self.cleaned_data.get('email')
-        if Student.objects.filter(email=email).exists():
+        if User.objects.filter(email=email).exists():
             raise forms.ValidationError("This email is already registered.")
         return email
 
     class Meta:
         model = User
-        fields = ("username", "full_name", "email", "dob", "phone_number", "address", "password1", "password2")
+        fields = ("username", "email")

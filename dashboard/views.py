@@ -3,9 +3,10 @@ from django.contrib.auth.decorators import login_required, user_passes_test
 from django.contrib import messages
 from django import forms
 import datetime
-from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance
-from .forms import ClassForm, TeacherForm, StudentForm, StaffForm, EnrollmentForm, ClassTypeForm, ScheduleForm, AttendanceForm
-from django.db.models import Count, Q
+import calendar
+from core.models import Clazz, Teacher, Student, Staff, Enrollment, ClassType, Schedule, Attendance, Material, Announcement, Assignment, AssignmentSubmission
+from .forms import ClassForm, TeacherForm, StudentForm, StaffForm, EnrollmentForm, ClassTypeForm, ScheduleForm, AttendanceForm, MaterialForm, AnnouncementForm, AssignmentForm, AssignmentSubmissionForm, AssignmentGradingForm
+from django.db.models import Count, Q, Avg
 
 def is_staff_user(user):
     return user.is_staff
@@ -50,46 +51,358 @@ def teacher_dashboard_view(request):
         return redirect('home')
     
     teacher = request.user.teacher
-    classes_qs = Clazz.objects.filter(teacher=teacher).annotate(
-        student_count=Count('enrollments', filter=Q(enrollments__status='approved'))
-    )
-    
-    # Calculate total unique students taught by this teacher
-    total_students = Student.objects.filter(
-        enrollments__clazz__teacher=teacher,
-        enrollments__status='approved'
-    ).distinct().count()
-    
     today = datetime.date.today()
     
+    # 1. Today's Schedule
+    try:
+        today_name_en = today.strftime('%A')
+        day_mapping = {
+            'Monday': 'Thứ 2',
+            'Tuesday': 'Thứ 3',
+            'Wednesday': 'Thứ 4',
+            'Thursday': 'Thứ 5',
+            'Friday': 'Thứ 6',
+            'Saturday': 'Thứ 7',
+            'Sunday': 'Chủ Nhật'
+        }
+        today_name_vn = day_mapping.get(today_name_en, today_name_en)
+
+        today_schedule = Schedule.objects.filter(
+            clazz__teacher=teacher, 
+            day_of_week__icontains=today_name_vn
+        ).select_related('clazz', 'clazz__class_type').order_by('start_time')
+    except Exception as e:
+        today_schedule = []
+        print(f"Error loading schedule: {e}")
+
+    # 2. Working Statistics (Sessions based on Attendance records)
+    try:
+        monthly_sessions = Attendance.objects.filter(
+            enrollment__clazz__teacher=teacher, 
+            date__month=today.month, 
+            date__year=today.year
+        ).values('enrollment__clazz', 'date').distinct().count()
+
+        yearly_sessions = Attendance.objects.filter(
+            enrollment__clazz__teacher=teacher, 
+            date__year=today.year
+        ).values('enrollment__clazz', 'date').distinct().count()
+    except Exception as e:
+        monthly_sessions = 0
+        yearly_sessions = 0
+        print(f"Error loading sessions: {e}")
+
+    # 3. Class Data & Overall Stats
     classes = []
-    for clazz in classes_qs:
-        # Calculate progress
-        if clazz.start_date and clazz.end_date:
-            total_days = (clazz.end_date - clazz.start_date).days
-            if total_days > 0:
-                days_elapsed = (today - clazz.start_date).days
-                progress = (days_elapsed / total_days) * 100
-                progress = max(0, min(100, progress)) # Clamp between 0 and 100
+    total_attendance_rate = 0
+    total_avg_grade = 0
+    active_classes_count = 0
+    overall_attendance = 0
+    overall_grade = 0
+    total_students = 0
+
+    try:
+        classes_qs = Clazz.objects.filter(teacher=teacher).annotate(
+            student_count=Count('enrollments', filter=Q(enrollments__status='approved'))
+        )
+        
+        for clazz in classes_qs:
+            # Progress & Active Status
+            if clazz.start_date and clazz.end_date:
+                total_days = (clazz.end_date - clazz.start_date).days
+                if total_days > 0:
+                    days_elapsed = (today - clazz.start_date).days
+                    progress = (days_elapsed / total_days) * 100
+                    progress = max(0, min(100, progress))
+                else:
+                    progress = 100 if today >= clazz.end_date else 0
+                
+                clazz.is_active = clazz.start_date <= today <= clazz.end_date
             else:
-                progress = 100 if today >= clazz.end_date else 0
-        else:
-            progress = 0
+                progress = 0
+                clazz.is_active = False
             
-        # Attach to object (won't save to DB, just for view)
-        clazz.progress = int(progress)
-        
-        # Check if active (current)
-        clazz.is_active = clazz.start_date <= today <= clazz.end_date if clazz.start_date and clazz.end_date else False
-        
-        classes.append(clazz)
+            clazz.progress = int(progress)
+
+            # Class Statistics
+            # Attendance Rate
+            total_presents = Attendance.objects.filter(enrollment__clazz=clazz, status='Present').count()
+            total_records = Attendance.objects.filter(enrollment__clazz=clazz).count()
+            if total_records > 0:
+                clazz.attendance_rate = int((total_presents / total_records) * 100)
+            else:
+                clazz.attendance_rate = 0
+                
+            # Average Grade (Final Test)
+            valid_grades = Enrollment.objects.filter(clazz=clazz, status='approved', final_test__isnull=False)
+            avg_grade = valid_grades.aggregate(Avg('final_test'))['final_test__avg']
+            clazz.avg_grade = round(avg_grade, 1) if avg_grade is not None else "N/A"
+
+            # Aggregate for Overall Stats (only if class has data)
+            if total_records > 0:
+                total_attendance_rate += clazz.attendance_rate
+            if avg_grade is not None:
+                total_avg_grade += avg_grade
+            
+            if clazz.student_count > 0:
+                active_classes_count += 1
+
+            classes.append(clazz)
+
+        # Calculate Overall Averages
+        overall_attendance = int(total_attendance_rate / len(classes)) if classes else 0
+        overall_grade = round(total_avg_grade / active_classes_count, 1) if active_classes_count > 0 else 0
+
+        # Total Students
+        total_students = Student.objects.filter(
+            enrollments__clazz__teacher=teacher,
+            enrollments__status='approved'
+        ).distinct().count()
+    except Exception as e:
+        print(f"Error loading class stats: {e}")
     
     return render(request, 'dashboard/teacher_dashboard.html', {
         'teacher': teacher,
         'classes': classes,
+        'today_schedule': today_schedule,
+        'monthly_sessions': monthly_sessions,
+        'yearly_sessions': yearly_sessions,
+        'overall_attendance': overall_attendance,
+        'overall_grade': overall_grade,
         'total_students': total_students,
         'today': today,
     })
+
+@login_required
+def teacher_assignments_view(request):
+    if not hasattr(request.user, 'teacher'):
+        messages.error(request, "Access denied. Teachers only.")
+        return redirect('home')
+    
+    teacher = request.user.teacher
+    assignments = Assignment.objects.filter(clazz__teacher=teacher).select_related('clazz').order_by('-due_date')
+    
+    return render(request, 'dashboard/teacher_assignments.html', {
+        'assignments': assignments,
+    })
+
+@login_required
+def teacher_schedule_view(request):
+    if not hasattr(request.user, 'teacher'):
+        messages.error(request, "Access denied. Teachers only.")
+        return redirect('home')
+    
+    teacher = request.user.teacher
+    
+    # Get month/year from query params or default to today
+    today = datetime.date.today()
+    try:
+        year = int(request.GET.get('year', today.year))
+        month = int(request.GET.get('month', today.month))
+    except ValueError:
+        year = today.year
+        month = today.month
+        
+    # Generate calendar
+    cal = calendar.Calendar()
+    # Use monthdayscalendar as requested by user
+    month_days = cal.monthdayscalendar(year, month)
+    
+    # Get all classes for this teacher that are active in this month
+    _, last_day = calendar.monthrange(year, month)
+    month_start = datetime.date(year, month, 1)
+    month_end = datetime.date(year, month, last_day)
+    
+    active_classes = Clazz.objects.filter(
+        teacher=teacher,
+        start_date__lte=month_end,
+        end_date__gte=month_start
+    ).select_related('schedule', 'class_type')
+    
+    # Map English day names to Vietnamese
+    day_mapping = {
+        'Monday': 'Thứ 2',
+        'Tuesday': 'Thứ 3',
+        'Wednesday': 'Thứ 4',
+        'Thursday': 'Thứ 5',
+        'Friday': 'Thứ 6',
+        'Saturday': 'Thứ 7',
+        'Sunday': 'Chủ Nhật'
+    }
+    
+    # Structure the calendar data
+    calendar_data = []
+    
+    for week in month_days:
+        week_data = []
+        for day in week:
+            if day == 0:
+                week_data.append({'day': 0, 'events': []})
+            else:
+                current_date = datetime.date(year, month, day)
+                day_name_en = current_date.strftime('%A')
+                day_name_vn = day_mapping.get(day_name_en, day_name_en)
+                
+                events = []
+                
+                for clazz in active_classes:
+                    # Check if class is active on this specific date
+                    if clazz.start_date <= current_date <= clazz.end_date:
+                        # Check if schedule matches this day of week
+                        if hasattr(clazz, 'schedule'):
+                            # Case-insensitive check
+                            if day_name_vn.lower() in clazz.schedule.day_of_week.lower():
+                                events.append({
+                                    'class_name': clazz.class_name,
+                                    'time': f"{clazz.schedule.start_time.strftime('%H:%M')} - {clazz.schedule.end_time.strftime('%H:%M')}",
+                                    'room': clazz.room,
+                                    'id': clazz.pk
+                                })
+                
+                # Sort events by time
+                events.sort(key=lambda x: x['time'])
+                
+                is_today = (current_date == today)
+                
+                week_data.append({
+                    'day': day,
+                    'date': current_date,
+                    'is_today': is_today,
+                    'events': events
+                })
+        calendar_data.append(week_data)
+
+    # Navigation logic
+    prev_month_date = month_start - datetime.timedelta(days=1)
+    # Finding next month
+    if month == 12:
+        next_month_date = datetime.date(year + 1, 1, 1)
+    else:
+        next_month_date = datetime.date(year, month + 1, 1)
+    
+    context = {
+        'teacher': teacher,
+        'calendar_data': calendar_data,
+        'current_month_name': calendar.month_name[month],
+        'current_year': year,
+        'prev_month': prev_month_date.month,
+        'prev_year': prev_month_date.year,
+        'next_month': next_month_date.month,
+        'next_year': next_month_date.year,
+    }
+    return render(request, 'dashboard/teacher_schedule.html', context)
+
+@login_required
+def teacher_statistics_view(request):
+    if not hasattr(request.user, 'teacher'):
+        messages.error(request, "Access denied. Teachers only.")
+        return redirect('home')
+    
+    teacher = request.user.teacher
+    today = datetime.date.today()
+    
+    # 1. Detailed Class Stats
+    classes_qs = Clazz.objects.filter(teacher=teacher).annotate(
+        total_enrollments=Count('enrollments', filter=Q(enrollments__status='approved'))
+    )
+    
+    class_stats = []
+    students_at_risk = []
+    
+    total_classes = 0
+    total_students_unique = set()
+    global_attendance_sum = 0
+    global_attendance_count = 0
+    global_grade_sum = 0
+    global_grade_count = 0
+
+    for clazz in classes_qs:
+        total_classes += 1
+        
+        # Attendance for this class
+        total_sessions = Attendance.objects.filter(enrollment__clazz=clazz).count()
+        total_presents = Attendance.objects.filter(enrollment__clazz=clazz, status='Present').count()
+        
+        attendance_rate = (total_presents / total_sessions * 100) if total_sessions > 0 else 0
+        attendance_rate = round(attendance_rate, 1)
+        
+        # Grades
+        valid_grades = Enrollment.objects.filter(clazz=clazz, status='approved', final_test__isnull=False)
+        avg_grade = valid_grades.aggregate(Avg('final_test'))['final_test__avg']
+        avg_grade = round(avg_grade, 2) if avg_grade is not None else None
+        
+        # Grade Distribution
+        grade_dist = {
+            'A': valid_grades.filter(final_test__gte=8.5).count(),
+            'B': valid_grades.filter(final_test__gte=7.0, final_test__lt=8.5).count(),
+            'C': valid_grades.filter(final_test__gte=5.5, final_test__lt=7.0).count(),
+            'D': valid_grades.filter(final_test__gte=4.0, final_test__lt=5.5).count(),
+            'F': valid_grades.filter(final_test__lt=4.0).count(),
+        }
+
+        class_stats.append({
+            'class_name': clazz.class_name,
+            'student_count': clazz.total_enrollments,
+            'attendance_rate': attendance_rate,
+            'avg_grade': avg_grade if avg_grade else "N/A",
+            'grade_dist': grade_dist
+        })
+        
+        # Global Aggregates
+        global_attendance_sum += attendance_rate
+        global_attendance_count += 1
+        if avg_grade:
+            global_grade_sum += avg_grade
+            global_grade_count += 1
+            
+        # Identify At Risk Students in this class
+        enrollments = Enrollment.objects.filter(clazz=clazz, status='approved').select_related('student')
+        for enrollment in enrollments:
+            total_students_unique.add(enrollment.student.pk)
+            
+            # Student Attendance
+            s_sessions = Attendance.objects.filter(enrollment=enrollment).count()
+            s_presents = Attendance.objects.filter(enrollment=enrollment, status='Present').count()
+            s_rate = (s_presents / s_sessions * 100) if s_sessions > 0 else 100
+            
+            # Student Grade
+            s_grade = enrollment.final_test
+            
+            reasons = []
+            if s_sessions > 5 and s_rate < 70: # Only flag if enough sessions occurred
+                reasons.append(f"Low Attendance ({round(s_rate)}%)")
+            if s_grade is not None and s_grade < 5.0:
+                reasons.append(f"Low Grade ({s_grade})")
+                
+            if reasons:
+                students_at_risk.append({
+                    'student_name': enrollment.student.full_name,
+                    'class_name': clazz.class_name,
+                    'reasons': ", ".join(reasons)
+                })
+
+    # Count Working Days (Unique dates with attendance this month)
+    working_days_count = Attendance.objects.filter(
+        enrollment__clazz__teacher=teacher,
+        date__month=today.month,
+        date__year=today.year
+    ).values('date').distinct().count()
+
+    overview = {
+        'total_classes': total_classes,
+        'total_students': len(total_students_unique),
+        'avg_attendance_rate': round(global_attendance_sum / global_attendance_count, 1) if global_attendance_count else 0,
+        'avg_grade': round(global_grade_sum / global_grade_count, 2) if global_grade_count else 0,
+        'working_days': working_days_count,
+    }
+
+    context = {
+        'teacher': teacher,
+        'class_stats': class_stats,
+        'overview': overview,
+        'students_at_risk': students_at_risk,
+    }
+    return render(request, 'dashboard/teacher_statistics.html', context)
 
 @login_required
 @user_passes_test(is_staff_user, login_url="accounts:login")
@@ -645,4 +958,232 @@ def enter_grades_view(request, class_pk):
         'enrollments': enrollments,
         'base_template': base_template,
         'dashboard_url': dashboard_url
+    })
+
+@login_required
+def teacher_class_detail_view(request, class_pk):
+    if not hasattr(request.user, 'teacher'):
+        messages.error(request, "Access denied. Teachers only.")
+        return redirect('home')
+    
+    clazz = get_object_or_404(Clazz, pk=class_pk, teacher=request.user.teacher)
+    
+    # Handle forms
+    if request.method == 'POST':
+        form_type = request.POST.get('form_type')
+        
+        if form_type == 'material':
+            form = MaterialForm(request.POST, request.FILES)
+            if form.is_valid():
+                material = form.save(commit=False)
+                material.clazz = clazz
+                material.save()
+                messages.success(request, "Material uploaded successfully!")
+                return redirect('dashboard:teacher_class_detail', class_pk=class_pk)
+                
+        elif form_type == 'announcement':
+            form = AnnouncementForm(request.POST)
+            if form.is_valid():
+                announcement = form.save(commit=False)
+                announcement.clazz = clazz
+                announcement.save()
+                messages.success(request, "Announcement posted successfully!")
+                return redirect('dashboard:teacher_class_detail', class_pk=class_pk)
+                
+        elif form_type == 'assignment':
+            form = AssignmentForm(request.POST)
+            if form.is_valid():
+                assignment = form.save(commit=False)
+                assignment.clazz = clazz
+                assignment.save()
+                messages.success(request, "Assignment created successfully!")
+                return redirect('dashboard:teacher_class_detail', class_pk=class_pk)
+
+    # Fetch Data
+    materials = clazz.materials.all().order_by('-uploaded_at')
+    announcements = clazz.announcements.all().order_by('-posted_at')
+    assignments = clazz.assignments.all().order_by('due_date')
+    enrollments = clazz.enrollments.filter(status='approved').select_related('student')
+    
+    context = {
+        'clazz': clazz,
+        'materials': materials,
+        'announcements': announcements,
+        'assignments': assignments,
+        'enrollments': enrollments,
+        'material_form': MaterialForm(),
+        'announcement_form': AnnouncementForm(),
+        'assignment_form': AssignmentForm(),
+    }
+    return render(request, 'dashboard/teacher_class_detail.html', context)
+
+@login_required
+def delete_material_view(request, pk):
+    material = get_object_or_404(Material, pk=pk, clazz__teacher=request.user.teacher)
+    class_pk = material.clazz.pk
+    material.delete()
+    messages.success(request, "Material deleted.")
+    return redirect('dashboard:teacher_class_detail', class_pk=class_pk)
+
+@login_required
+def delete_announcement_view(request, pk):
+    announcement = get_object_or_404(Announcement, pk=pk, clazz__teacher=request.user.teacher)
+    class_pk = announcement.clazz.pk
+    announcement.delete()
+    messages.success(request, "Announcement deleted.")
+    return redirect('dashboard:teacher_class_detail', class_pk=class_pk)
+
+@login_required
+def delete_assignment_view(request, pk):
+    assignment = get_object_or_404(Assignment, pk=pk, clazz__teacher=request.user.teacher)
+    class_pk = assignment.clazz.pk
+    assignment.delete()
+    messages.success(request, "Assignment deleted.")
+    return redirect('dashboard:teacher_class_detail', class_pk=class_pk)
+
+@login_required
+def teacher_student_detail_view(request, class_pk, student_pk):
+    if not hasattr(request.user, 'teacher'):
+        return redirect('home')
+        
+    enrollment = get_object_or_404(Enrollment, clazz__pk=class_pk, student__pk=student_pk, clazz__teacher=request.user.teacher)
+    student = enrollment.student
+    clazz = enrollment.clazz
+    
+    # Attendance History
+    attendances = Attendance.objects.filter(enrollment=enrollment).order_by('date')
+    attendance_stats = {
+        'Present': attendances.filter(status='Present').count(),
+        'Absent': attendances.filter(status='Absent').count(),
+        'Excused': attendances.filter(status='Excused').count(),
+        'Total': attendances.count()
+    }
+    if attendance_stats['Total'] > 0:
+        attendance_stats['rate'] = int((attendance_stats['Present'] / attendance_stats['Total']) * 100)
+    else:
+        attendance_stats['rate'] = 0
+        
+    # Grades
+    grades = {
+        'Mini Test 1': enrollment.minitest1,
+        'Mini Test 2': enrollment.minitest2,
+        'Mini Test 3': enrollment.minitest3,
+        'Mini Test 4': enrollment.minitest4,
+        'Midterm': enrollment.midterm,
+        'Final Test': enrollment.final_test,
+    }
+    
+    context = {
+        'student': student,
+        'clazz': clazz,
+        'enrollment': enrollment,
+        'attendances': attendances,
+        'attendance_stats': attendance_stats,
+        'grades': grades,
+    }
+    return render(request, 'dashboard/teacher_student_detail.html', context)
+
+@login_required
+def teacher_assignment_submissions_view(request, assignment_pk):
+    if not hasattr(request.user, 'teacher'):
+        messages.error(request, "Access denied. Teachers only.")
+        return redirect('home')
+
+    assignment = get_object_or_404(Assignment, pk=assignment_pk, clazz__teacher=request.user.teacher)
+    
+    # Get all students enrolled in the class
+    enrollments = Enrollment.objects.filter(clazz=assignment.clazz, status='approved').select_related('student')
+    
+    submission_data = []
+    for enrollment in enrollments:
+        submission = AssignmentSubmission.objects.filter(assignment=assignment, student=enrollment.student).first()
+        form = None
+        if submission:
+            form = AssignmentGradingForm(instance=submission)
+        else:
+            form = AssignmentGradingForm()
+            
+        submission_data.append({
+            'student': enrollment.student,
+            'submission': submission,
+            'form': form
+        })
+
+    if request.method == 'POST':
+        submission_pk = request.POST.get('submission_pk')
+        if submission_pk:
+            submission = get_object_or_404(AssignmentSubmission, pk=submission_pk, assignment=assignment)
+            form = AssignmentGradingForm(request.POST, instance=submission)
+            if form.is_valid():
+                form.save()
+                messages.success(request, f"Graded {submission.student.full_name}'s submission.")
+                return redirect('dashboard:teacher_assignment_submissions', assignment_pk=assignment_pk)
+    
+    return render(request, 'dashboard/teacher_assignment_submissions.html', {
+        'assignment': assignment,
+        'submission_data': submission_data,
+        'clazz': assignment.clazz
+    })
+
+@login_required
+def student_submit_assignment_view(request, assignment_pk):
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        messages.error(request, "You are not registered as a student.")
+        return redirect('home')
+        
+    assignment = get_object_or_404(Assignment, pk=assignment_pk)
+    
+    # Check if student is enrolled in the class
+    is_enrolled = Enrollment.objects.filter(student=student, clazz=assignment.clazz, status='approved').exists()
+    if not is_enrolled:
+        messages.error(request, "You are not enrolled in this class.")
+        return redirect('dashboard:student_courses')
+
+    submission = AssignmentSubmission.objects.filter(assignment=assignment, student=student).first()
+    
+    if request.method == 'POST':
+        form = AssignmentSubmissionForm(request.POST, request.FILES, instance=submission)
+        if form.is_valid():
+            sub = form.save(commit=False)
+            sub.assignment = assignment
+            sub.student = student
+            sub.save()
+            messages.success(request, "Assignment submitted successfully!")
+            return redirect('dashboard:student_submit_assignment', assignment_pk=assignment_pk)
+    else:
+        form = AssignmentSubmissionForm(instance=submission)
+        
+    return render(request, 'dashboard/student_submit_assignment.html', {
+        'assignment': assignment,
+        'form': form,
+        'submission': submission,
+        'clazz': assignment.clazz
+    })
+
+@login_required
+def student_class_detail_view(request, class_pk):
+    try:
+        student = request.user.student
+    except Student.DoesNotExist:
+        messages.error(request, "You are not registered as a student.")
+        return redirect('home')
+        
+    clazz = get_object_or_404(Clazz, pk=class_pk)
+    
+    # Check enrollment
+    if not Enrollment.objects.filter(student=student, clazz=clazz, status='approved').exists():
+         messages.error(request, "Access denied.")
+         return redirect('dashboard:student_courses')
+         
+    materials = clazz.materials.all().order_by('-uploaded_at')
+    announcements = clazz.announcements.all().order_by('-posted_at')
+    assignments = clazz.assignments.all().order_by('due_date')
+    
+    return render(request, 'dashboard/student_class_detail.html', {
+        'clazz': clazz,
+        'materials': materials,
+        'announcements': announcements,
+        'assignments': assignments,
     })

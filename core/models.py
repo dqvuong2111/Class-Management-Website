@@ -148,3 +148,50 @@ class Feedback(models.Model):
 
     def __str__(self):
         return f"Feedback by {self.student.full_name} for {self.teacher.full_name} in {self.clazz.class_name}"
+
+# Model for Class Materials
+class Material(models.Model):
+    title = models.CharField(max_length=255, verbose_name="Title")
+    file = models.FileField(upload_to='class_materials/', verbose_name="File")
+    clazz = models.ForeignKey(Clazz, related_name='materials', on_delete=models.CASCADE, verbose_name="Class")
+    uploaded_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.clazz.class_name})"
+
+# Model for Announcements
+class Announcement(models.Model):
+    title = models.CharField(max_length=255, verbose_name="Title")
+    content = models.TextField(verbose_name="Content")
+    clazz = models.ForeignKey(Clazz, related_name='announcements', on_delete=models.CASCADE, verbose_name="Class")
+    posted_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.clazz.class_name})"
+
+# Model for Assignments
+class Assignment(models.Model):
+    title = models.CharField(max_length=255, verbose_name="Title")
+    description = models.TextField(verbose_name="Description")
+    due_date = models.DateTimeField(verbose_name="Due Date")
+    clazz = models.ForeignKey(Clazz, related_name='assignments', on_delete=models.CASCADE, verbose_name="Class")
+    created_at = models.DateTimeField(auto_now_add=True)
+
+    def __str__(self):
+        return f"{self.title} ({self.clazz.class_name})"
+
+class AssignmentSubmission(models.Model):
+    assignment = models.ForeignKey(Assignment, related_name='submissions', on_delete=models.CASCADE, verbose_name="Assignment")
+    student = models.ForeignKey(Student, related_name='submissions', on_delete=models.CASCADE, verbose_name="Student")
+    submission_file = models.FileField(upload_to='assignment_submissions/', verbose_name="Submission File")
+    submitted_at = models.DateTimeField(auto_now_add=True, verbose_name="Submitted At")
+    grade = models.FloatField(null=True, blank=True, verbose_name="Grade")
+    feedback = models.TextField(blank=True, verbose_name="Feedback")
+
+    class Meta:
+        unique_together = ('assignment', 'student')
+        verbose_name = "Assignment Submission"
+        verbose_name_plural = "Assignment Submissions"
+
+    def __str__(self):
+        return f"{self.student.full_name} - {self.assignment.title}"

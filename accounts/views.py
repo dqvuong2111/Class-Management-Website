@@ -91,7 +91,9 @@ def signup_view(request):
                     else:
                         return redirect('dashboard:student_dashboard')
             except Exception as e:
-                messages.error(request, f"An error occurred during signup. Please try again. ({e})")
+                # Log the specific error for debugging if needed
+                print(f"Signup Error: {e}") 
+                messages.error(request, "An error occurred during signup. Please ensure your information is correct and try again.")
     else:
         form = SimpleSignUpForm()
     return render(request, 'accounts/signup.html', {'form': form})
