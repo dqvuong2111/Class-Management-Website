@@ -86,6 +86,7 @@
                 <!-- Class Image -->
                 <div class="h-48 overflow-hidden relative">
                     {% if enrollment.clazz.image and enrollment.clazz.image.url %}
+                        <!-- Debug: Image URL is {{ enrollment.clazz.image.url }} -->
                         <img src="{{ enrollment.clazz.image.url }}" alt="{{ enrollment.clazz.class_name }}" class="w-full h-full object-cover transform group-hover:scale-105 transition-transform duration-500">
                     {% else %}
                         <div class="w-full h-full bg-gray-100 flex items-center justify-center text-gray-400">
