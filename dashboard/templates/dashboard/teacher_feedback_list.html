@@ -33,7 +33,6 @@
                 <thead class="bg-gray-50 text-gray-900 font-medium">
                     <tr>
                         <th class="p-4">Class</th>
-                        <th class="p-4">Student</th>
                         <th class="p-4 text-center">Teacher Rate</th>
                         <th class="p-4 text-center">Class Rate</th>
                         <th class="p-4">Comment</th>
@@ -44,7 +43,6 @@
                     {% for feedback in feedbacks %}
                     <tr class="hover:bg-gray-50 transition-colors">
                         <td class="p-4 font-medium text-gray-900">{{ feedback.clazz.class_name }}</td>
-                        <td class="p-4 text-gray-700">{{ feedback.student.full_name }}</td>
                         <td class="p-4 text-center">
                             <span class="px-2 py-1 rounded-full text-xs font-medium bg-yellow-100 text-yellow-800">
                                 {{ feedback.teacher_rate }}

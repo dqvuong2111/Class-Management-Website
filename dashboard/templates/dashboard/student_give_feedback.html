@@ -4,111 +4,121 @@
 {% block title %}Give Feedback for {{ clazz.class_name }}{% endblock %}
 
 {% block content %}
-<div class="h-full flex flex-col" style="background-color: var(--bg-app); color: var(--text-primary);">
-    <!-- Header -->
-    <div class="p-6">
-        <h1 class="text-3xl font-bold" style="color: var(--text-primary);">Give Feedback</h1>
-        <p style="color: var(--text-secondary);">Your anonymous feedback on "{{ clazz.class_name }}" helps us improve.</p>
+<div class="container mx-auto p-6 max-w-2xl space-y-6">
+    <div class="flex items-center justify-between mb-6">
+        <div>
+            <h1 class="text-3xl font-bold text-gray-900">Give Feedback for "{{ clazz.class_name }}"</h1>
+            <p class="text-gray-500">Your anonymous feedback helps us improve.</p>
+        </div>
+        <a href="{% url 'dashboard:student_class_detail' clazz.pk %}" class="flex items-center gap-2 px-4 py-2 bg-gray-200 text-gray-700 rounded-xl hover:bg-gray-300 transition-colors text-sm font-medium">
+            <i data-lucide="arrow-left" class="h-4 w-4"></i> Back to Class
+        </a>
     </div>
 
-    <!-- Main Content -->
-    <div class="flex-1 px-6 pb-6">
-        <div class="bg-white rounded-2xl shadow-sm border p-6 lg:p-8 max-w-3xl mx-auto" style="background-color: var(--bg-surface); border-color: var(--border-default);">
-            <form method="post" class="space-y-8">
-                {% csrf_token %}
+    <div class="bg-white rounded-xl shadow-sm border border-gray-200 p-8">
+        <form method="post" class="space-y-8">
+            {% csrf_token %}
+            
+            <!-- Hidden inputs to store actual values -->
+            <input type="hidden" name="teacher_rate" id="id_teacher_rate" value="5">
+            <input type="hidden" name="class_rate" id="id_class_rate" value="5">
 
-                <!-- Ratings Section -->
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                        <label for="{{ form.teacher_rate.id_for_label }}" class="form-label text-center">How would you rate the teacher?</label>
-                        <div class="flex items-center justify-center gap-2 mt-2">
-                            <i data-lucide="frown" class="h-6 w-6" style="color: var(--text-tertiary);"></i>
-                            {{ form.teacher_rate }}
-                            <i data-lucide="smile" class="h-6 w-6" style="color: var(--text-tertiary);"></i>
-                        </div>
-                         <p class="text-xs text-center mt-2" style="color: var(--text-tertiary);">(1 = Needs Improvement, 10 = Excellent)</p>
-                    </div>
-                    <div>
-                        <label for="{{ form.class_rate.id_for_label }}" class="form-label text-center">How would you rate the class overall?</label>
-                        <div class="flex items-center justify-center gap-2 mt-2">
-                             <i data-lucide="thumbs-down" class="h-6 w-6" style="color: var(--text-tertiary);"></i>
-                            {{ form.class_rate }}
-                            <i data-lucide="thumbs-up" class="h-6 w-6" style="color: var(--text-tertiary);"></i>
-                        </div>
-                        <p class="text-xs text-center mt-2" style="color: var(--text-tertiary);">(1 = Not Helpful, 10 = Very Helpful)</p>
-                    </div>
-                </div>
-
-                <!-- Comments Section -->
-                <div>
-                    <label for="{{ form.comment.id_for_label }}" class="form-label">Additional Comments (Optional)</label>
-                    {{ form.comment }}
-                    <p class="text-xs mt-2" style="color: var(--text-tertiary);">What did you like? What could be improved?</p>
-                </div>
-
-                <!-- Submission -->
-                <div class="flex justify-between items-center pt-4">
-                     <a href="{% url 'dashboard:student_class_detail' clazz.pk %}" class="px-4 py-2 rounded-xl transition-colors text-sm font-medium" style="color: var(--text-secondary); hover: var(--bg-soft);">
-                        Cancel
-                    </a>
-                    <button type="submit" class="send-button">
-                        <i data-lucide="send" class="h-4 w-4 mr-2"></i>
-                        Submit Feedback
+            <!-- Teacher Rating -->
+            <div class="space-y-3 text-center">
+                <label class="block text-lg font-bold text-gray-800">How would you rate the Teacher?</label>
+                <div class="flex justify-center gap-2 star-rating" id="teacher-stars">
+                    {% for i in "12345" %}
+                    <button type="button" data-value="{{ i }}" class="star-btn p-1 transition-transform hover:scale-110 focus:outline-none">
+                        <i data-lucide="star" class="h-10 w-10 text-gray-300 fill-current"></i>
                     </button>
+                    {% endfor %}
                 </div>
-            </form>
-        </div>
+                <p class="text-sm text-gray-500" id="teacher-rating-text">Rate 1 to 5 stars</p>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <!-- Class Rating -->
+            <div class="space-y-3 text-center">
+                <label class="block text-lg font-bold text-gray-800">How would you rate the Class?</label>
+                <div class="flex justify-center gap-2 star-rating" id="class-stars">
+                    {% for i in "12345" %}
+                    <button type="button" data-value="{{ i }}" class="star-btn p-1 transition-transform hover:scale-110 focus:outline-none">
+                        <i data-lucide="star" class="h-10 w-10 text-gray-300 fill-current"></i>
+                    </button>
+                    {% endfor %}
+                </div>
+                 <p class="text-sm text-gray-500" id="class-rating-text">Rate 1 to 5 stars</p>
+            </div>
+
+            <hr class="border-gray-100">
+
+            <!-- Comment -->
+            <div class="space-y-2">
+                <label for="{{ form.comment.id_for_label }}" class="block text-sm font-bold text-gray-700">Comments (Optional)</label>
+                <div class="relative">
+                     <textarea name="comment" id="id_comment" rows="4" class="w-full p-4 rounded-xl border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-100 transition-all resize-none text-gray-700 bg-gray-50 focus:bg-white" placeholder="Share your experience..."></textarea>
+                </div>
+            </div>
+
+            <button type="submit" class="w-full py-3.5 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-all font-bold shadow-lg shadow-indigo-200">
+                Submit Feedback
+            </button>
+        </form>
     </div>
 </div>
 
-<style>
-    /* Form Styles */
-    .form-label {
-        display: block;
-        font-size: 1rem;
-        font-weight: 600;
-        color: var(--text-primary);
-        margin-bottom: 0.5rem;
+<script>
+    document.addEventListener('DOMContentLoaded', () => {
+        setupStarRating('teacher-stars', 'id_teacher_rate', 'teacher-rating-text');
+        setupStarRating('class-stars', 'id_class_rate', 'class-rating-text');
+        lucide.createIcons();
+    });
+
+    function setupStarRating(containerId, inputId, textId) {
+        const container = document.getElementById(containerId);
+        const input = document.getElementById(inputId);
+        const textDisplay = document.getElementById(textId);
+        const stars = container.querySelectorAll('.star-btn i');
+        const buttons = container.querySelectorAll('.star-btn');
+        
+        let currentRating = 0;
+
+        buttons.forEach((btn, index) => {
+            btn.addEventListener('mouseenter', () => highlightStars(index + 1));
+            btn.addEventListener('mouseleave', () => highlightStars(currentRating));
+            btn.addEventListener('click', () => {
+                currentRating = index + 1;
+                // Map 1-5 stars to 1-10 rating for backend if needed, or keep 1-5
+                // The backend model says 1-10. Let's map 1 star = 2 points? 
+                // Or just save 1-5 if the model allows decimals.
+                // Prompt asked for star line. Let's assume 5 stars maps to 10 points or just store 5 if user is okay with it.
+                // Let's map 1->2, 2->4, 3->6, 4->8, 5->10 to fit the 1-10 scale.
+                input.value = currentRating * 2; 
+                highlightStars(currentRating);
+                updateText(currentRating);
+            });
+        });
+
+        function highlightStars(count) {
+            stars.forEach((star, index) => {
+                if (index < count) {
+                    star.classList.remove('text-gray-300');
+                    star.classList.add('text-yellow-400');
+                } else {
+                    star.classList.remove('text-yellow-400');
+                    star.classList.add('text-gray-300');
+                }
+            });
+        }
+        
+        function updateText(rating) {
+            const texts = ["Poor", "Fair", "Good", "Very Good", "Excellent"];
+            if (rating > 0 && rating <= 5) {
+                textDisplay.textContent = texts[rating - 1];
+                textDisplay.className = "text-sm font-medium text-indigo-600 animate-pulse";
+            }
+        }
     }
-    input[type="number"],
-    textarea {
-        display: block;
-        width: 100%;
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
-        border-radius: 0.75rem;
-        border: 1px solid var(--border-default);
-        background-color: var(--bg-surface);
-        color: var(--text-primary);
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    input[type="number"] {
-        text-align: center;
-        font-size: 1.5rem;
-        font-weight: bold;
-        max-width: 100px;
-    }
-    input[type="number"]:focus,
-    textarea:focus {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-soft);
-    }
-    textarea {
-        min-height: 120px;
-    }
-    .send-button {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.75rem 1.5rem;
-        border-radius: 0.75rem;
-        font-weight: 600;
-        color: var(--btn-primary-text);
-        background-color: var(--btn-primary-bg);
-        transition: opacity 0.2s;
-    }
-    .send-button:hover {
-        opacity: 0.85;
-    }
-</style>
+</script>
 {% endblock %}

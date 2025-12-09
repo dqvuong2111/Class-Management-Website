@@ -11,9 +11,7 @@
             <h1 class="text-3xl font-bold text-gray-900">{{ clazz.class_name }}</h1>
             <p class="text-gray-500">{{ clazz.class_type.code }} | {{ clazz.teacher.full_name }} | {{ clazz.room }}</p>
         </div>
-        <a href="{% url 'dashboard:student_schedule' %}" class="px-4 py-2 bg-white border border-gray-300 text-gray-700 rounded-xl hover:bg-gray-50 transition-colors">
-            View Schedule
-        </a>
+
         <a href="{% url 'dashboard:student_give_feedback' clazz.pk %}" class="px-4 py-2 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors">
             Give Feedback
         </a>

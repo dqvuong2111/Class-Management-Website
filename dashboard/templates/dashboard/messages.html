@@ -1,215 +1,131 @@
-{% extends 'dashboard/base_dashboard.html' %}
+{% extends base_template %}
 {% load static %}
 
 {% block title %}Messages{% endblock %}
 
 {% block content %}
-<div class="h-full flex flex-col" style="background-color: var(--bg-app); color: var(--text-primary);">
-    <!-- Header -->
-    <div class="p-6">
-        <h1 class="text-3xl font-bold" style="color: var(--text-primary);">Messages</h1>
+<div class="h-[calc(100vh-8rem)] flex flex-col">
+    <div class="mb-4">
+        <h1 class="text-2xl font-bold text-gray-900">Messages</h1>
     </div>
 
-    <!-- Main Content -->
-    <div class="flex-1 px-6 pb-6">
-        <div class="bg-white rounded-2xl shadow-sm border h-full flex flex-col" style="background-color: var(--bg-surface); border-color: var(--border-default);">
-            <!-- Tabs -->
-            <div class="flex border-b" style="border-color: var(--border-default);">
-                <button id="inbox-tab" onclick="switchTab('inbox')" class="tab-button active">
-                    <i data-lucide="inbox" class="h-5 w-5 mr-2"></i>
-                    Inbox ({{ received.count }})
-                </button>
-                <button id="sent-tab" onclick="switchTab('sent')" class="tab-button">
-                    <i data-lucide="send" class="h-5 w-5 mr-2"></i>
-                    Sent ({{ sent.count }})
-                </button>
-                <button id="compose-tab" onclick="switchTab('compose')" class="tab-button">
-                    <i data-lucide="edit-3" class="h-5 w-5 mr-2"></i>
-                    Compose
-                </button>
+    <div class="flex-1 bg-white rounded-2xl shadow-sm border border-gray-200 overflow-hidden flex">
+        <!-- Sidebar / Contact List -->
+        <div class="w-full md:w-80 border-r border-gray-200 flex flex-col {% if active_contact %}hidden md:flex{% endif %}">
+            <div class="p-4 border-b border-gray-200">
+                <form method="get" class="relative">
+                    <i data-lucide="search" class="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400"></i>
+                    <input type="text" placeholder="Search people..." class="w-full pl-10 pr-4 py-2 bg-gray-50 border-gray-200 rounded-xl text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:bg-white transition-all">
+                </form>
             </div>
-
-            <!-- Tab Content -->
-            <div class="flex-1 p-6 overflow-y-auto">
-                <!-- Inbox Content -->
-                <div id="inbox-content" class="tab-content space-y-2">
-                    {% for message in received %}
-                    <div class="message-item {% if not message.is_read %}unread{% endif %}" onclick="this.classList.remove('unread'); document.getElementById('message-body-received-{{ message.pk }}').classList.toggle('hidden');">
-                        <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <div class="w-2 h-2 rounded-full mr-3 indicator"></div>
-                                <span class="font-semibold mr-4 w-40 truncate">{{ message.sender.username }}</span>
-                                <span class="truncate">{{ message.subject }}</span>
-                            </div>
-                            <span class="text-xs text-gray-500 ml-4">{{ message.created_at|date:"M d, H:i" }}</span>
+            
+            <div class="flex-1 overflow-y-auto">
+                {% for contact in contacts %}
+                <a href="?chat_with={{ contact.username }}" class="block p-4 hover:bg-gray-50 transition-colors border-b border-gray-50 {% if active_contact.username == contact.username %}bg-indigo-50 border-indigo-100{% endif %}">
+                    <div class="flex items-center gap-3">
+                        <div class="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm">
+                            {{ contact.username|slice:":1"|upper }}
                         </div>
-                        <div id="message-body-received-{{ message.pk }}" class="hidden mt-4 p-4 rounded-lg" style="background-color: var(--bg-soft);">
-                            <p class="whitespace-pre-wrap">{{ message.body }}</p>
+                        <div class="flex-1 min-w-0">
+                            <h4 class="text-sm font-semibold text-gray-900 truncate">{{ contact.username }}</h4>
+                            <p class="text-xs text-gray-500 truncate">Click to chat</p>
                         </div>
                     </div>
-                    {% empty %}
-                    <p class="text-center py-12" style="color: var(--text-secondary);">Your inbox is empty.</p>
-                    {% endfor %}
+                </a>
+                {% empty %}
+                <div class="p-8 text-center text-gray-400 text-sm">
+                    No contacts yet. Start a conversation!
                 </div>
+                {% endfor %}
+            </div>
+        </div>
 
-                <!-- Sent Content -->
-                <div id="sent-content" class="tab-content hidden space-y-2">
-                    {% for message in sent %}
-                    <div class="message-item" onclick="document.getElementById('message-body-sent-{{ message.pk }}').classList.toggle('hidden');">
-                         <div class="flex items-center justify-between">
-                            <div class="flex items-center">
-                                <div class="w-2 h-2 rounded-full mr-3"></div>
-                                <span class="font-semibold mr-4 w-40 truncate">To: {{ message.recipient.username }}</span>
-                                <span class="truncate">{{ message.subject }}</span>
-                            </div>
-                            <span class="text-xs text-gray-500 ml-4">{{ message.created_at|date:"M d, H:i" }}</span>
-                        </div>
-                        <div id="message-body-sent-{{ message.pk }}" class="hidden mt-4 p-4 rounded-lg" style="background-color: var(--bg-soft);">
-                            <p class="whitespace-pre-wrap">{{ message.body }}</p>
+        <!-- Chat Area -->
+        <div class="flex-1 flex flex-col {% if not active_contact %}hidden md:flex{% endif %} bg-gray-50/50">
+            {% if active_contact %}
+                <!-- Chat Header -->
+                <div class="p-4 bg-white border-b border-gray-200 flex items-center gap-3 shadow-sm z-10">
+                    <a href="{% url 'dashboard:messages' %}" class="md:hidden p-2 -ml-2 text-gray-500 hover:bg-gray-100 rounded-lg">
+                        <i data-lucide="arrow-left" class="h-5 w-5"></i>
+                    </a>
+                    <div class="h-10 w-10 rounded-full bg-gradient-to-br from-indigo-500 to-purple-600 flex items-center justify-center text-white font-bold shadow-sm">
+                        {{ active_contact.username|slice:":1"|upper }}
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-900">{{ active_contact.username }}</h3>
+                        <div class="flex items-center gap-1.5">
+                            <span class="h-2 w-2 rounded-full bg-green-500"></span>
+                            <span class="text-xs text-gray-500">Online</span>
                         </div>
                     </div>
-                    {% empty %}
-                    <p class="text-center py-12" style="color: var(--text-secondary);">You haven't sent any messages.</p>
-                    {% endfor %}
                 </div>
 
-                <!-- Compose Content -->
-                <div id="compose-content" class="tab-content hidden">
-                    <form method="post" class="space-y-6">
-                        {% csrf_token %}
-                        <div>
-                            <label for="{{ form.recipient_username.id_for_label }}" class="form-label">Recipient Username</label>
-                            {{ form.recipient_username }}
-                        </div>
-                        <div>
-                            <label for="{{ form.subject.id_for_label }}" class="form-label">Subject</label>
-                            {{ form.subject }}
-                        </div>
-                        <div>
-                            <label for="{{ form.body.id_for_label }}" class="form-label">Body</label>
-                            {{ form.body }}
-                        </div>
+                <!-- Messages Stream -->
+                <div class="flex-1 overflow-y-auto p-4 space-y-4" id="messages-container">
+                    {% for message in messages_list %}
+                        {% if message.sender == user %}
+                        <!-- Sent Message -->
                         <div class="flex justify-end">
-                            <button type="submit" class="send-button">
-                                <i data-lucide="send" class="h-4 w-4 mr-2"></i>
-                                Send Message
+                            <div class="max-w-[85%] sm:max-w-[70%]">
+                                <div class="bg-indigo-600 text-white px-4 py-2.5 rounded-2xl rounded-tr-none shadow-sm text-sm leading-relaxed">
+                                    {{ message.body|linebreaksbr }}
+                                </div>
+                                <p class="text-[10px] text-gray-400 text-right mt-1 mr-1">{{ message.created_at|date:"g:i A" }}</p>
+                            </div>
+                        </div>
+                        {% else %}
+                        <!-- Received Message -->
+                        <div class="flex justify-start">
+                             <div class="max-w-[85%] sm:max-w-[70%]">
+                                <div class="bg-white text-gray-800 px-4 py-2.5 rounded-2xl rounded-tl-none border border-gray-200 shadow-sm text-sm leading-relaxed">
+                                    {{ message.body|linebreaksbr }}
+                                </div>
+                                <p class="text-[10px] text-gray-400 mt-1 ml-1">{{ message.created_at|date:"g:i A" }}</p>
+                            </div>
+                        </div>
+                        {% endif %}
+                    {% endfor %}
+                </div>
+
+                <!-- Input Area -->
+                <div class="p-4 bg-white border-t border-gray-200">
+                    <form method="post" class="flex items-end gap-2">
+                        {% csrf_token %}
+                        <!-- Hidden recipient field (handled by backend or we can inject it) -->
+                        <input type="hidden" name="recipient_username" value="{{ active_contact.username }}">
+                        <input type="hidden" name="subject" value="Chat Message"> <!-- Default subject for chat mode -->
+                        
+                        <div class="flex-1 relative">
+                            <textarea name="body" rows="1" class="w-full pl-4 pr-12 py-3 bg-gray-50 border-gray-200 rounded-2xl focus:ring-2 focus:ring-indigo-500 focus:border-transparent resize-none max-h-32 text-sm" placeholder="Type a message..."></textarea>
+                            <button type="button" class="absolute right-3 bottom-2.5 text-gray-400 hover:text-gray-600">
+                                <i data-lucide="paperclip" class="h-5 w-5"></i>
                             </button>
                         </div>
+                        <button type="submit" class="p-3 bg-indigo-600 text-white rounded-xl hover:bg-indigo-700 transition-colors shadow-sm flex-shrink-0">
+                            <i data-lucide="send" class="h-5 w-5"></i>
+                        </button>
                     </form>
                 </div>
-            </div>
+            
+            {% else %}
+                <!-- Empty State -->
+                <div class="flex-1 flex flex-col items-center justify-center text-gray-400 p-8">
+                    <div class="h-24 w-24 bg-gray-100 rounded-full flex items-center justify-center mb-6">
+                        <i data-lucide="message-circle" class="h-10 w-10 text-gray-300"></i>
+                    </div>
+                    <h3 class="text-xl font-bold text-gray-900 mb-2">Your Messages</h3>
+                    <p class="max-w-sm text-center text-gray-500">Select a contact from the left sidebar to start chatting or continue a conversation.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 </div>
 
-<style>
-    .tab-button {
-        padding: 1rem 1.5rem;
-        font-medium: 600;
-        font-size: 0.9rem;
-        display: flex;
-        align-items: center;
-        border-bottom: 2px solid transparent;
-        color: var(--text-secondary);
-        transition: all 0.2s ease;
-    }
-    .tab-button:hover {
-        background-color: var(--bg-soft);
-        color: var(--text-primary);
-    }
-    .tab-button.active {
-        color: var(--accent);
-        border-bottom-color: var(--accent);
-    }
-    .message-item {
-        padding: 1rem;
-        border-radius: 0.75rem;
-        cursor: pointer;
-        border: 1px solid transparent;
-        transition: background-color 0.2s;
-    }
-    .message-item:hover {
-        background-color: var(--bg-soft);
-        border-color: var(--border-default);
-    }
-    .message-item.unread .font-semibold {
-        font-weight: 800;
-        color: var(--text-primary);
-    }
-    .message-item .indicator {
-        background-color: transparent;
-    }
-    .message-item.unread .indicator {
-        background-color: var(--accent);
-    }
-
-    /* Form Styles */
-    .form-label {
-        display: block;
-        font-size: 0.875rem;
-        font-weight: 500;
-        color: var(--text-secondary);
-        margin-bottom: 0.5rem;
-    }
-    input[type="text"],
-    textarea {
-        display: block;
-        width: 100%;
-        padding: 0.75rem 1rem;
-        font-size: 0.9rem;
-        border-radius: 0.75rem;
-        border: 1px solid var(--border-default);
-        background-color: var(--bg-surface);
-        color: var(--text-primary);
-        transition: border-color 0.2s, box-shadow 0.2s;
-    }
-    input[type="text"]:focus,
-    textarea:focus {
-        outline: none;
-        border-color: var(--accent);
-        box-shadow: 0 0 0 3px var(--accent-soft);
-    }
-    textarea {
-        min-height: 150px;
-    }
-    .send-button {
-        display: inline-flex;
-        align-items: center;
-        padding: 0.75rem 1.5rem;
-        border-radius: 0.75rem;
-        font-weight: 600;
-        color: var(--btn-primary-text);
-        background-color: var(--btn-primary-bg);
-        transition: opacity 0.2s;
-    }
-    .send-button:hover {
-        opacity: 0.85;
-    }
-
-</style>
-
 <script>
-    function switchTab(tabName) {
-        // Hide all content
-        document.getElementById('inbox-content').classList.add('hidden');
-        document.getElementById('sent-content').classList.add('hidden');
-        document.getElementById('compose-content').classList.add('hidden');
-
-        // Deactivate all tabs
-        document.getElementById('inbox-tab').classList.remove('active');
-        document.getElementById('sent-tab').classList.remove('active');
-        document.getElementById('compose-tab').classList.remove('active');
-
-        // Activate the selected tab and show its content
-        document.getElementById(tabName + '-content').classList.remove('hidden');
-        document.getElementById(tabName + '-tab').classList.add('active');
+    // Scroll to bottom of chat
+    const msgContainer = document.getElementById('messages-container');
+    if (msgContainer) {
+        msgContainer.scrollTop = msgContainer.scrollHeight;
     }
-
-    // Set initial active tab based on URL hash or default to inbox
-    document.addEventListener('DOMContentLoaded', () => {
-        const initialTab = window.location.hash.substring(1) || 'inbox';
-        switchTab(initialTab);
-    });
-
 </script>
 {% endblock %}

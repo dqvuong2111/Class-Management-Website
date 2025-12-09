@@ -145,27 +145,60 @@ def student_qr_scan_view(request, token):
 
 @login_required
 def messages_view(request):
-    # Unified view for both teachers and students
     user = request.user
-    received = Message.objects.filter(recipient=user).order_by('-created_at')
-    sent = Message.objects.filter(sender=user).order_by('-created_at')
+    from django.contrib.auth.models import User
+    
+    # 1. Identify contacts (people user has exchanged messages with)
+    received_ids = Message.objects.filter(recipient=user).values_list('sender_id', flat=True)
+    sent_ids = Message.objects.filter(sender=user).values_list('recipient_id', flat=True)
+    contact_ids = set(received_ids) | set(sent_ids)
+    
+    contacts = User.objects.filter(id__in=contact_ids)
+    
+    # 2. Handle specific chat selection
+    chat_username = request.GET.get('chat_with')
+    active_contact = None
+    messages_list = []
+    
+    if chat_username:
+        active_contact = get_object_or_404(User, username=chat_username)
+        messages_list = Message.objects.filter(
+            Q(sender=user, recipient=active_contact) | 
+            Q(sender=active_contact, recipient=user)
+        ).order_by('created_at')
+        
+        # Mark as read
+        Message.objects.filter(recipient=user, sender=active_contact, is_read=False).update(is_read=True)
     
     if request.method == 'POST':
         form = MessageForm(request.POST)
         if form.is_valid():
             msg = form.save(commit=False)
             msg.sender = user
-            msg.recipient = form.cleaned_data['recipient_username'] # This is the User object from clean method
+            msg.recipient = form.cleaned_data['recipient_username']
             msg.save()
             messages.success(request, "Message sent!")
-            return redirect('dashboard:messages')
+            # Redirect back to the same chat
+            return redirect(f"{request.path}?chat_with={msg.recipient.username}")
     else:
-        form = MessageForm()
+        # Pre-fill recipient if chatting
+        initial = {'recipient_username': active_contact.username} if active_contact else {}
+        form = MessageForm(initial=initial)
+
+    # Determine base template
+    if hasattr(user, 'teacher'):
+        base_template = 'dashboard/teacher_base_dashboard.html'
+    elif hasattr(user, 'student'):
+        base_template = 'dashboard/student_base_dashboard.html'
+    else:
+        base_template = 'dashboard/base_dashboard.html'
         
     return render(request, 'dashboard/messages.html', {
-        'received': received,
-        'sent': sent,
-        'form': form
+        'contacts': contacts,
+        'active_contact': active_contact,
+        'messages_list': messages_list,
+        'form': form,
+        'base_template': base_template
     })
 
 def is_staff_user(user):
@@ -610,21 +643,53 @@ def student_dashboard_view(request):
         messages.error(request, "You are not registered as a student.")
         return redirect('home')
         
-    enrollments = student.enrollments.filter(status='approved')
+    enrollments = student.enrollments.filter(status='approved').select_related('clazz', 'clazz__class_type', 'clazz__teacher')
+    
+    # Notifications Logic
+    enrolled_classes = [e.clazz for e in enrollments]
+    
+    recent_announcements = Announcement.objects.filter(clazz__in=enrolled_classes).order_by('-posted_at')[:5]
+    recent_assignments = Assignment.objects.filter(clazz__in=enrolled_classes).order_by('-created_at')[:5]
+    
+    # Combine and sort (simple merge for display)
+    notifications = []
+    for a in recent_announcements:
+        notifications.append({
+            'type': 'announcement',
+            'title': a.title,
+            'class_name': a.clazz.class_name,
+            'date': a.posted_at,
+            'icon': 'megaphone'
+        })
+        
+    for a in recent_assignments:
+        notifications.append({
+            'type': 'assignment',
+            'title': a.title,
+            'class_name': a.clazz.class_name,
+            'date': a.created_at,
+            'icon': 'clipboard-list'
+        })
+    
+    # Sort by date descending
+    notifications.sort(key=lambda x: x['date'], reverse=True)
+    notifications = notifications[:10] # Top 10
+
     return render(request, 'dashboard/student_dashboard.html', {
         'student': student,
-        'enrollments': enrollments
+        'enrollments': enrollments,
+        'notifications': notifications,
+        'unread_count': len(notifications) # Simple count for now
     })
 
 @login_required
 def student_courses_view(request):
-    try:
-        student = request.user.student
-    except Student.DoesNotExist:
-        messages.error(request, "You are not registered as a student.")
-        return redirect('home')
-    enrollments = student.enrollments.filter(status='approved').select_related('clazz', 'clazz__class_type', 'clazz__teacher')
-    return render(request, 'dashboard/student_courses.html', {'student': student, 'enrollments': enrollments})
+    # Fetch all classes (can be optimized to exclude enrolled ones)
+    classes = Clazz.objects.all().order_by('class_name').select_related('teacher', 'class_type', 'schedule')
+    
+    return render(request, 'dashboard/student_courses.html', {
+        'classes': classes
+    })
 
 @login_required
 def student_schedule_view(request):
@@ -662,6 +727,24 @@ def student_achievements_view(request):
         return redirect('home')
     
     enrollments = student.enrollments.all().select_related('clazz', 'clazz__class_type', 'clazz__teacher')
+
+    for enrollment in enrollments:
+        # Calculate scores
+        # Minitests (Average) - Treat None as 0
+        m1 = enrollment.minitest1 or 0
+        m2 = enrollment.minitest2 or 0
+        m3 = enrollment.minitest3 or 0
+        m4 = enrollment.minitest4 or 0
+        mini_avg = (m1 + m2 + m3 + m4) / 4.0
+        
+        midterm = enrollment.midterm or 0
+        final = enrollment.final_test or 0
+        
+        # Weighted Average: 20% Mini, 30% Mid, 50% Final
+        overall = (mini_avg * 0.2) + (midterm * 0.3) + (final * 0.5)
+        
+        enrollment.overall_score_calculated = round(overall, 2)
+        enrollment.is_passed = overall >= 4.0
 
     return render(request, 'dashboard/student_achievements.html', {'student': student, 'enrollments': enrollments})
 

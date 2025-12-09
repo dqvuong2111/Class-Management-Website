@@ -6,9 +6,9 @@ class BootstrapFormMixin:
         super().__init__(*args, **kwargs)
         for field_name, field in self.fields.items():
             if isinstance(field.widget, forms.CheckboxInput):
-                field.widget.attrs['class'] = 'form-check-input'
+                field.widget.attrs['class'] = 'h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded'
             else:
-                field.widget.attrs['class'] = 'form-control'
+                field.widget.attrs['class'] = 'form-input'
 # ... (rest of imports)
 
 class AssignmentCreateForm(BootstrapFormMixin, forms.ModelForm):
