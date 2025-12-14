@@ -1,299 +1,69 @@
-/* Import Google Fonts */
-@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Poppins:wght@500;600;700&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
 
-/* --- New Modern Theme --- */
-:root {
-    --primary-color: #3B82F6; /* Blue 500 */
-    --primary-hover: #2563EB; /* Blue 600 */
-    --secondary-color: #6B7280; /* Gray 500 */
-    --background-color: #F9FAFB; /* Gray 50 */
-    --text-color: #1F2937; /* Gray 800 */
-    --text-muted: #6B7280; /* Gray 500 */
-    --white: #FFFFFF;
-    --border-color: #E5E7EB; /* Gray 200 */
-    --container-shadow: 0 1px 3px 0 rgba(0, 0, 0, 0.05), 0 1px 2px 0 rgba(0, 0, 0, 0.02);
-    --container-shadow-hover: 0 4px 6px -1px rgba(0, 0, 0, 0.07), 0 2px 4px -1px rgba(0, 0, 0, 0.04);
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom Animations */
+@keyframes float {
+    0% { transform: translateY(0px); }
+    50% { transform: translateY(-20px); }
+    100% { transform: translateY(0px); }
 }
 
-/* General Body Styles */
-body {
-    font-family: 'Inter', sans-serif;
-    background-color: var(--background-color);
-    color: var(--text-color);
-    line-height: 1.6;
-    -webkit-font-smoothing: antialiased;
-    -moz-osx-font-smoothing: grayscale;
+.animate-float {
+    animation: float 6s ease-in-out infinite;
 }
 
-h1, h2, h3, h4, h5, h6 {
-    font-family: 'Poppins', sans-serif;
-    color: var(--text-color);
-    font-weight: 700;
+.animate-float-delayed {
+    animation: float 6s ease-in-out infinite;
+    animation-delay: 3s;
 }
 
-a {
-    text-decoration: none;
-    color: var(--primary-color);
-    transition: color 0.2s;
+@keyframes blob {
+    0% { transform: translate(0px, 0px) scale(1); }
+    33% { transform: translate(30px, -50px) scale(1.1); }
+    66% { transform: translate(-20px, 20px) scale(0.9); }
+    100% { transform: translate(0px, 0px) scale(1); }
 }
 
-a:hover {
-    color: var(--primary-hover);
+.animate-blob {
+    animation: blob 7s infinite;
 }
 
-/* --- Redesigned Components --- */
-
-/* Buttons */
-.btn-primary-custom {
-    background-color: var(--primary-color);
-    border: 1px solid var(--primary-color);
-    color: var(--white);
-    padding: 0.6rem 1.25rem;
-    border-radius: 0.5rem; /* 8px */
-    font-weight: 600;
-    transition: all 0.2s ease;
-    box-shadow: var(--container-shadow);
+.animation-delay-2000 {
+    animation-delay: 2s;
 }
 
-.btn-primary-custom:hover {
-    background-color: var(--primary-hover);
-    border-color: var(--primary-hover);
-    transform: translateY(-1px);
-    box-shadow: var(--container-shadow-hover);
+.animation-delay-4000 {
+    animation-delay: 4s;
 }
 
-/* General Container/Card Style */
-.ui-container {
-    background-color: var(--white);
-    border-radius: 1rem; /* 16px */
-    border: 1px solid var(--border-color);
-    padding: 1.5rem; /* 24px */
-    box-shadow: var(--container-shadow);
-    transition: box-shadow 0.2s ease;
+/* Custom Components */
+.login-btn-shape {
+    border-radius: 12px 4px 12px 4px;
 }
 
-.ui-container:hover {
-    box-shadow: var(--container-shadow-hover);
+.hero-blob {
+    filter: blur(80px);
+    opacity: 0.6;
 }
 
-/* Form Styles */
-.form-input {
-    display: block;
-    width: 100%;
-    padding: 0.75rem 1rem;
-    font-size: 0.9rem;
-    border-radius: 0.5rem;
-    border: 1px solid var(--border-color);
-    background-color: var(--background-color);
-    color: var(--text-color);
-    transition: border-color 0.2s, box-shadow 0.2s;
+/* Scrollbar Customization */
+::-webkit-scrollbar {
+    width: 8px;
+    height: 8px;
 }
 
-.form-input:focus {
-    outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.2);
+::-webkit-scrollbar-track {
+    background: #f1f1f1; 
 }
 
-.form-label {
-    display: block;
-    font-size: 0.875rem;
-    font-weight: 500;
-    color: var(--text-color);
-    margin-bottom: 0.5rem;
+::-webkit-scrollbar-thumb {
+    background: #c7c7c7; 
+    border-radius: 4px;
 }
 
-/* --- Scrollbar Utilities --- */
-.no-scrollbar::-webkit-scrollbar {
-    display: none;
-}
-.no-scrollbar {
-    -ms-overflow-style: none;
-    scrollbar-width: none;
-}
-/* Apply to common scrollable areas if needed, or use class explicitly */
-.overflow-auto, .overflow-y-auto, .overflow-x-auto {
-    /* Optional: Uncomment to apply globally, but safer to use utility class
-       scrollbar-width: thin; 
-    */
-}
-
-
-/* --- Original Styles (to be phased out) --- */
-
-.navbar-custom {
-    background-color: var(--white);
-    border-bottom: 1px solid var(--border-color);
-    padding: 1rem 0;
-    box-shadow: none; /* Remove shadow for cleaner look */
-}
-
-.navbar-custom .navbar-brand {
-    font-weight: 700;
-    color: var(--primary-color);
-    font-size: 1.5rem;
-    display: flex;
-    align-items: center;
-}
-
-.navbar-custom .nav-link {
-    color: var(--secondary-color);
-    font-weight: 500;
-    margin: 0 12px;
-    transition: color 0.2s;
-}
-
-
-.btn-secondary-custom {
-    background-color: transparent;
-    border: 1px solid var(--border-color);
-    color: var(--text-color);
-    padding: 0.6rem 1.5rem;
-    border-radius: 50px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-}
-
-.btn-secondary-custom:hover {
-    background-color: var(--white);
-    border-color: var(--secondary-color);
-    color: var(--text-color);
-}
-
-.btn-outline-primary-custom {
-    background-color: transparent;
-    border: 1px solid var(--primary-color);
-    color: var(--primary-color);
-    padding: 0.6rem 1.5rem;
-    border-radius: 50px;
-    font-weight: 600;
-    transition: all 0.2s ease;
-}
-
-.btn-outline-primary-custom:hover {
-    background-color: var(--primary-color);
-    color: var(--white);
-}
-
-
-/* Hero Section */
-.hero-section {
-    background: linear-gradient(135deg, #eff6ff 0%, #ffffff 100%); /* Subtle gradient */
-    padding: 100px 0;
-    text-align: center;
-}
-
-.hero-section h1 {
-    font-size: 3.5rem;
-    line-height: 1.2;
-    margin-bottom: 1.5rem;
-    background: -webkit-linear-gradient(45deg, var(--primary-color), #60a5fa);
-    -webkit-background-clip: text;
-    -webkit-text-fill-color: transparent;
-}
-
-.hero-section p {
-    font-size: 1.25rem;
-    color: var(--secondary-color);
-    max-width: 700px;
-    margin: 0 auto 2rem;
-}
-
-/* Feature Cards */
-.feature-section {
-    padding: 80px 0;
-    background-color: var(--white);
-}
-
-.feature-card {
-    padding: 2rem;
-    background: var(--white);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    transition: all 0.3s ease;
-    height: 100%;
-}
-
-.feature-card:hover {
-    box-shadow: 0 10px 30px rgba(0,0,0,0.05);
-    transform: translateY(-5px);
-    border-color: var(--primary-color);
-}
-
-.feature-icon {
-    font-size: 2rem;
-    color: var(--primary-color);
-    margin-bottom: 1rem;
-    background: #eff6ff;
-    width: 60px;
-    height: 60px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: 12px;
-}
-
-/* Course Card Styles */
-.course-card {
-    background-color: var(--white);
-    border: 1px solid var(--border-color);
-    border-radius: 16px;
-    overflow: hidden;
-    transition: all 0.3s ease;
-    box-shadow: none;
-}
-
-.course-card:hover {
-    transform: translateY(-5px);
-    box-shadow: 0 10px 25px rgba(0,0,0,0.05);
-    border-color: var(--primary-color);
-}
-
-.course-card .card-img-top {
-    height: 200px;
-    object-fit: cover;
-}
-
-.course-card .card-body {
-    padding: 1.5rem;
-}
-
-.course-card .card-title {
-    font-weight: 700;
-    margin-bottom: 0.75rem;
-}
-
-.course-card .card-text {
-    color: var(--secondary-color);
-    font-size: 0.95rem;
-}
-
-/* Footer Styles */
-.footer-custom {
-    background-color: var(--white);
-    border-top: 1px solid var(--border-color);
-    color: var(--secondary-color);
-    padding: 3rem 0;
-}
-
-.footer-custom a {
-    color: var(--secondary-color);
-}
-
-.footer-custom a:hover {
-    color: var(--primary-color);
-}
-
-/* Dynamic UI Helper Classes */
-.rounded-xl-custom {
-    border-radius: 1rem;
-}
-.shadow-custom {
-    box-shadow: var(--container-shadow);
-}
-.hover-scale {
-    transition: transform 0.2s ease;
-}
-.hover-scale:hover {
-    transform: scale(1.02);
+::-webkit-scrollbar-thumb:hover {
+    background: #a8a8a8; 
 }
