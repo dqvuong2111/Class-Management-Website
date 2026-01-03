@@ -140,7 +140,7 @@ ClassManagementWebsite/
 
 1. **Clone the repository**
    ```bash
-   git clone https://github.com/dqvuong2111/ClassManagementWebsite.git
+   git clone https://github.com/dqvuong2111/ClassManagementProject.git
    cd ClassManagementWebsite
    ```
 
