@@ -4,87 +4,199 @@
 {% block title %}QR Attendance Generator{% endblock %}
 
 {% block content %}
-<div class="max-w-4xl mx-auto space-y-8">
-    <div class="flex items-center justify-between">
-        <div>
-            <h1 class="text-3xl font-bold text-gray-900">QR Attendance</h1>
-            <p class="text-gray-500">Generate a live QR code for student attendance.</p>
+<div class="space-y-6">
+    <!-- Header -->
+    <div class="relative overflow-hidden bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl p-8 text-white shadow-xl">
+        <div class="relative z-10 flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+            <div class="flex items-center gap-4">
+                <div class="h-14 w-14 bg-white/20 backdrop-blur-sm rounded-2xl flex items-center justify-center border border-white/20 shadow-inner">
+                    <i data-lucide="qr-code" class="h-7 w-7 text-white"></i>
+                </div>
+                <div>
+                    <h1 class="text-3xl font-extrabold tracking-tight">QR Attendance</h1>
+                    <p class="text-indigo-100 font-medium">Generate live codes for instant check-in</p>
+                </div>
+            </div>
+            
+            <div class="flex items-center gap-3 bg-white/10 backdrop-blur-md px-4 py-2 rounded-2xl border border-white/20">
+                <div class="flex h-8 w-8 items-center justify-center rounded-lg bg-white/20">
+                    <i data-lucide="calendar" class="h-4 w-4"></i>
+                </div>
+                <div class="text-sm font-semibold">
+                    {{ today|date:"l, F j, Y" }}
+                </div>
+            </div>
         </div>
-        <div class="bg-indigo-50 text-indigo-700 px-4 py-2 rounded-xl text-sm font-medium flex items-center gap-2">
-            <i data-lucide="info" class="h-4 w-4"></i>
-            Valid for today: {{ today|date:"M j, Y" }}
-        </div>
+        
+        <!-- Decorative Background -->
+        <div class="absolute top-0 right-0 -mt-10 -mr-10 w-64 h-64 bg-white/10 rounded-full blur-3xl"></div>
+        <div class="absolute bottom-0 left-0 -mb-10 -ml-10 w-40 h-40 bg-purple-500/30 rounded-full blur-2xl"></div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-        <!-- Configuration Form -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 h-fit">
-            <h2 class="text-xl font-bold text-gray-900 mb-6 flex items-center gap-2">
-                <i data-lucide="settings-2" class="h-5 w-5 text-indigo-600"></i>
-                Start New Session
-            </h2>
-            
-            <form method="post" class="space-y-6">
-                {% csrf_token %}
-                <div class="space-y-2">
-                    <label for="class_id" class="block text-sm font-medium text-gray-700">Select Class</label>
-                    <div class="relative">
-                        <select name="class_id" id="class_id" class="block w-full rounded-xl border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-3 px-4 bg-gray-50 border" required>
-                            <option value="">-- Choose a class --</option>
-                            {% for class in classes %}
-                                <option value="{{ class.pk }}" {% if selected_class.pk == class.pk %}selected{% endif %}>{{ class.class_name }}</option>
-                            {% endfor %}
-                        </select>
-                        <div class="absolute inset-y-0 right-0 flex items-center px-2 pointer-events-none">
-                            <i data-lucide="chevron-down" class="h-4 w-4 text-gray-400"></i>
-                        </div>
+    <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- control panel -->
+        <div class="lg:col-span-4 space-y-6">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-6">
+                <h2 class="text-lg font-bold text-slate-800 mb-6 flex items-center gap-2">
+                    <div class="h-8 w-8 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600">
+                        <i data-lucide="settings-2" class="h-4 w-4"></i>
                     </div>
-                </div>
+                    Session Setup
+                </h2>
                 
-                <button type="submit" class="w-full flex items-center justify-center gap-2 bg-indigo-600 text-white px-6 py-3.5 rounded-xl font-semibold hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500 transition-all shadow-md hover:shadow-lg">
-                    <i data-lucide="qr-code" class="h-5 w-5"></i>
-                    Generate Live QR
-                </button>
-            </form>
+                <form method="post" class="space-y-6">
+                    {% csrf_token %}
+                    
+                    <div class="space-y-3">
+                        <label for="class_id" class="block text-sm font-semibold text-slate-700">Select Class</label>
+                        <div class="relative group">
+                            <select name="class_id" id="class_id" class="block w-full appearance-none rounded-xl border-slate-200 bg-slate-50 text-slate-700 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm py-3.5 px-4 pr-10 transition-all group-hover:bg-slate-100" required>
+                                <option value="">-- Choose a class --</option>
+                                {% for class in classes %}
+                                    <option value="{{ class.pk }}" {% if selected_class.pk == class.pk %}selected{% endif %}>{{ class.class_name }}</option>
+                                {% endfor %}
+                            </select>
+                            <div class="absolute inset-y-0 right-0 flex items-center px-4 pointer-events-none text-slate-400 group-hover:text-indigo-500 transition-colors">
+                                <i data-lucide="chevron-down" class="h-4 w-4"></i>
+                            </div>
+                        </div>
+                        <p class="text-xs text-slate-500 px-1">Generating a new QR will expire any previous active codes for this class.</p>
+                    </div>
+                    
+                    <button type="submit" class="w-full relative group overflow-hidden rounded-xl bg-gradient-to-br from-indigo-600 to-purple-600 p-px shadow-lg shadow-indigo-500/20 hover:shadow-indigo-500/40 transition-all duration-300">
+                        <div class="relative flex items-center justify-center gap-2 rounded-xl bg-transparent px-6 py-3.5 text-white font-semibold transition-all group-hover:bg-opacity-0">
+                            <i data-lucide="sparkles" class="h-4 w-4"></i>
+                            Generate Live QR
+                        </div>
+                    </button>
+                </form>
+            </div>
+            
+            <!-- Instructions Card -->
+            <div class="bg-gradient-to-br from-slate-800 to-slate-900 rounded-3xl shadow-lg p-6 text-white relative overflow-hidden">
+                <div class="relative z-10">
+                    <h3 class="font-bold flex items-center gap-2 mb-3">
+                        <i data-lucide="info" class="h-4 w-4 text-emerald-400"></i>
+                        How it works
+                    </h3>
+                    <ul class="space-y-3 text-sm text-slate-300">
+                        <li class="flex items-start gap-2">
+                            <span class="bg-white/10 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">1</span>
+                            Students login to their portal on mobile.
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="bg-white/10 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">2</span>
+                            They scan this code using the in-app scanner.
+                        </li>
+                        <li class="flex items-start gap-2">
+                            <span class="bg-white/10 text-white rounded-full w-5 h-5 flex items-center justify-center text-xs font-bold mt-0.5">3</span>
+                            Attendance is marked "Present" instantly.
+                        </li>
+                    </ul>
+                </div>
+                <!-- Abstract shapes -->
+                <div class="absolute top-0 right-0 -mt-6 -mr-6 w-32 h-32 bg-indigo-500/20 rounded-full blur-2xl"></div>
+            </div>
         </div>
 
-        <!-- Display Area -->
-        <div class="bg-white rounded-2xl shadow-sm border border-gray-200 p-8 flex flex-col items-center justify-center text-center min-h-[400px]">
-            {% if qr_data %}
-                <div class="animate-fade-in-up w-full flex flex-col items-center">
-                    <div class="mb-6">
-                        <span class="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-green-100 text-green-800 text-xs font-bold uppercase tracking-wide">
-                            <span class="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span>
-                            Live Session Active
-                        </span>
+        <!-- Presentation Area -->
+        <div class="lg:col-span-8">
+            <div class="bg-white rounded-3xl shadow-sm border border-slate-100 p-8 flex flex-col items-center justify-center min-h-[500px] relative overflow-hidden group">
+                
+                {% if qr_data %}
+                    <div class="absolute top-0 inset-x-0 h-1 bg-gradient-to-r from-transparent via-indigo-500 to-transparent opacity-50"></div>
+                    
+                    <div class="w-full flex justify-between items-center absolute top-6 px-8 z-10">
+                        <div class="flex items-center gap-2">
+                            <span class="relative flex h-3 w-3">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-3 w-3 bg-emerald-500"></span>
+                            </span>
+                            <span class="text-emerald-700 font-bold text-sm tracking-wide uppercase">Live Session</span>
+                        </div>
+                        
+                        <div class="flex items-center gap-2">
+                            {% if active_session %}
+                                <form action="{% url 'dashboard:stop_qr_session' active_session.pk %}" method="post" class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit" class="flex items-center gap-2 text-red-600 hover:text-red-700 hover:bg-red-50 transition-colors bg-white px-3 py-1.5 rounded-lg text-sm font-medium border border-red-100">
+                                        <i data-lucide="stop-circle" class="h-4 w-4"></i>
+                                        Stop Session
+                                    </button>
+                                </form>
+                            {% endif %}
+                            
+                            <button onclick="toggleFullscreen()" class="flex items-center gap-2 text-slate-500 hover:text-indigo-600 transition-colors bg-slate-50 hover:bg-slate-100 px-3 py-1.5 rounded-lg text-sm font-medium border border-slate-200">
+                                <i data-lucide="maximize" class="h-4 w-4"></i>
+                                Fullscreen
+                            </button>
+                        </div>
+                    </div>
+                
+                    <div class="flex-1 flex flex-col items-center justify-center w-full z-0 mt-8 animate-fade-in-up">
+                        <h2 class="text-3xl font-extrabold text-slate-900 mb-2">{{ selected_class.class_name }}</h2>
+                        <p class="text-slate-500 font-medium mb-8 bg-slate-100 px-4 py-1 rounded-full">{{ today|date:"l, F j, Y" }}</p>
+                        
+                        <div class="relative group cursor-pointer transition-transform hover:scale-[1.02] duration-300">
+                            <div class="absolute -inset-1 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500 rounded-3xl blur opacity-25 group-hover:opacity-50 transition duration-1000 group-hover:duration-200"></div>
+                            <div class="relative bg-white p-6 rounded-2xl border border-slate-100 shadow-2xl">
+                                <div id="qrcode" class="overflow-hidden bg-white p-2 rounded-xl"></div>
+                                
+                                <div class="mt-6 text-center border-t border-slate-100 pt-4">
+                                    <p class="text-xs font-bold text-slate-400 uppercase mb-2">Verification Code</p>
+                                    <div class="text-4xl font-black text-indigo-600 tracking-widest">{{ active_session.passcode }}</div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
                     
-                    <h2 class="text-2xl font-bold text-gray-900 mb-2">{{ selected_class.class_name }}</h2>
-                    <p class="text-gray-500 mb-8">{{ today|date:"l, F j, Y" }}</p>
-                    
-                    <div class="bg-white p-4 rounded-2xl border-2 border-indigo-100 shadow-xl mb-8 relative group">
-                        <!-- QR Container -->
-                        <div id="qrcode" class="flex items-center justify-center bg-white rounded-xl overflow-hidden p-2"></div>
+                    <!-- Fullscreen Overlay Content (Hidden by default) -->
+                    <div id="fullscreen-overlay" class="hidden fixed inset-0 z-[100] bg-white flex-col items-center justify-center p-8">
+                        <button onclick="toggleFullscreen()" class="absolute top-8 right-8 p-3 bg-slate-100 hover:bg-slate-200 rounded-full transition-colors text-slate-700">
+                            <i data-lucide="minimize" class="h-6 w-6"></i>
+                        </button>
                         
-                        <!-- Scan instruction overlay -->
-                         <div class="absolute -bottom-4 left-1/2 -translate-x-1/2 bg-indigo-600 text-white px-4 py-1.5 rounded-full text-xs font-bold shadow-lg whitespace-nowrap">
-                            SCAN WITH APP
+                        <h1 class="text-4xl md:text-6xl font-extrabold text-slate-900 mb-4 text-center">{{ selected_class.class_name }}</h1>
+                        <p class="text-xl md:text-2xl text-slate-500 mb-12">{{ today|date:"l, F j, Y" }}</p>
+                        
+                        <div class="flex flex-col md:flex-row items-center gap-12 lg:gap-20">
+                            <div class="bg-white p-6 rounded-[2.5rem] shadow-2xl border border-slate-100 ring-8 ring-indigo-50">
+                                <div id="qrcode-fs"></div>
+                            </div>
+                            
+                            <div class="text-center md:text-left">
+                                <p class="text-slate-400 font-bold uppercase tracking-widest text-lg mb-4">Enter Code</p>
+                                <div class="text-8xl md:text-9xl font-black text-indigo-600 tracking-widest bg-slate-50 px-8 py-4 rounded-3xl border border-slate-200">
+                                    {{ active_session.passcode }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="mt-12 flex items-center gap-3">
+                        
+                        <div class="mt-12 flex items-center gap-3">
+                             <span class="relative flex h-4 w-4">
+                              <span class="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                              <span class="relative inline-flex rounded-full h-4 w-4 bg-emerald-500"></span>
+                            </span>
+                            <span class="text-2xl font-bold text-slate-700">Scan to Check Attendance</span>
                         </div>
                     </div>
 
-                    <p class="text-sm text-gray-400 max-w-xs mx-auto">
-                        Students scan this code to modify their attendance status to Present.
-                    </p>
-                </div>
-            {% else %}
-                <div class="text-gray-400 flex flex-col items-center">
-                    <div class="bg-gray-50 p-6 rounded-full mb-4">
-                        <i data-lucide="monitor" class="h-12 w-12 text-gray-300"></i>
+                {% else %}
+                    <!-- Empty State -->
+                    <div class="flex flex-col items-center justify-center text-center opacity-0 animate-fade-in-up" style="animation-delay: 0.1s;">
+                        <div class="relative mb-6">
+                            <div class="absolute inset-0 bg-indigo-100 rounded-full animate-ping opacity-20"></div>
+                            <div class="relative h-24 w-24 bg-gradient-to-br from-slate-50 to-slate-100 rounded-full flex items-center justify-center border border-slate-200 shadow-inner">
+                                <i data-lucide="qr-code" class="h-10 w-10 text-slate-400"></i>
+                            </div>
+                        </div>
+                        <h3 class="text-xl font-bold text-slate-900 mb-2">No Active Session</h3>
+                        <p class="text-slate-500 max-w-sm mx-auto">Select a class from the left panel to generate a secure attendance code for your students.</p>
                     </div>
-                    <h3 class="text-lg font-medium text-gray-900 mb-1">No Active Session</h3>
-                    <p class="text-sm">Select a class to generate a new attendance QR code.</p>
-                </div>
-            {% endif %}
+                {% endif %}
+            </div>
         </div>
     </div>
 </div>
@@ -97,24 +209,56 @@
 
         {% if qr_data %}
             var qrUrl = "{{ qr_data }}";
+            
+            // Render Main QR
             var qrcode = new QRCode(document.getElementById("qrcode"), {
                 text: qrUrl,
-                width: 200,
-                height: 200,
+                width: 256,
+                height: 256,
+                colorDark : "#1e293b", // slate-800
+                colorLight : "#ffffff",
+                correctLevel : QRCode.CorrectLevel.H
+            });
+            
+            // Render Fullscreen QR (Larger)
+            var qrcodeFs = new QRCode(document.getElementById("qrcode-fs"), {
+                text: qrUrl,
+                width: 500, // Larger visual
+                height: 500,
                 colorDark : "#000000",
                 colorLight : "#ffffff",
                 correctLevel : QRCode.CorrectLevel.H
             });
         {% endif %}
     });
+    
+    function toggleFullscreen() {
+        const overlay = document.getElementById('fullscreen-overlay');
+        if (overlay) {
+            overlay.classList.toggle('hidden');
+            overlay.classList.toggle('flex');
+            
+            if (!overlay.classList.contains('hidden')) {
+                // Request fullscreen native
+                if (document.documentElement.requestFullscreen) {
+                    document.documentElement.requestFullscreen().catch(e => console.log(e));
+                }
+            } else {
+                if (document.exitFullscreen) {
+                    document.exitFullscreen().catch(e => console.log(e));
+                }
+            }
+        }
+    }
 </script>
+
 <style>
     @keyframes fade-in-up {
         from { opacity: 0; transform: translateY(20px); }
         to { opacity: 1; transform: translateY(0); }
     }
     .animate-fade-in-up {
-        animation: fade-in-up 0.5s ease-out forwards;
+        animation: fade-in-up 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
     }
 </style>
 {% endblock %}

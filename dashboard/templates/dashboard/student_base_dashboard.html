@@ -81,12 +81,12 @@
         
         // Load State
         if (localStorage.getItem('studentSidebarCollapsed') === 'true') {
-            sidebar.classList.add('hidden'); // Use hidden for flex items
+            sidebar.classList.add('md:hidden'); // Use md:hidden so it doesn't affect mobile
         }
         
         if (toggleBtn) {
             toggleBtn.addEventListener('click', () => {
-                const isCollapsed = sidebar.classList.toggle('hidden'); // Toggle Visibility
+                const isCollapsed = sidebar.classList.toggle('md:hidden'); // Toggle Visibility
                 localStorage.setItem('studentSidebarCollapsed', isCollapsed);
             });
         }

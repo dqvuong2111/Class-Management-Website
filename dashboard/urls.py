@@ -17,6 +17,7 @@ urlpatterns = [
     path('teacher/statistics/', views.teacher_statistics_view, name='teacher_statistics'),
     path('teacher/feedback/', views.teacher_feedback_list_view, name='teacher_feedback'),
     path('teacher/qr/', views.teacher_qr_generate_view, name='teacher_qr'),
+    path('teacher/qr/stop/<int:session_id>/', views.stop_qr_session_view, name='stop_qr_session'),
     path('messages/', views.messages_view, name='messages'),
 
     path('teacher/class/<int:class_pk>/', views.teacher_class_detail_view, name='teacher_class_detail'),

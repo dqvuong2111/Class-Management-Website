@@ -5,6 +5,7 @@ from django.utils import timezone
 from django import forms
 import datetime
 import calendar
+import random
 from django.urls import reverse # Added for generating URLs in views
 import uuid # Added uuid import
 from core.models import (
@@ -119,52 +120,15 @@ def teacher_qr_generate_view(request):
         'selected_class': selected_class
     })
 
-@login_required
-def student_qr_scan_view(request, token):
-    if not hasattr(request.user, 'student'):
-        return render(request, 'dashboard/student_qr_success.html', {
-            'success': False,
-            'error_message': "Access denied. Students only."
-        })
-
-    student = request.user.student
-    
-    # Find Session
-    try:
-        session = AttendanceSession.objects.get(token=token, is_active=True)
-    except AttendanceSession.DoesNotExist:
-        return render(request, 'dashboard/student_qr_success.html', {
-            'success': False,
-            'error_message': "Invalid or expired session."
-        })
-
-    # Check expiration (e.g. valid for same day)
-    if session.date != datetime.date.today():
-         return render(request, 'dashboard/student_qr_success.html', {
-            'success': False,
-            'error_message': "This session has expired."
-        })
-        
-    # Check Enrollment
-    enrollment = Enrollment.objects.filter(student=student, clazz=session.clazz, status='approved').first()
-    if not enrollment:
-        return render(request, 'dashboard/student_qr_success.html', {
-            'success': False,
-            'error_message': "You are not enrolled in this class."
-        })
-
-    # Record Attendance
-    Attendance.objects.update_or_create(
-        enrollment=enrollment,
-        date=session.date,
-        defaults={'status': 'Present'}
-    )
-    
-    return render(request, 'dashboard/student_qr_success.html', {
-        'success': True,
-        'clazz': session.clazz,
-        'date': session.date
-    })
+# Old scan view removed
+# The new logic is placed at the end of the file as part of the previous bulk edit.
+# To trigger a clean replace, I'm replacing the entire function block here with a comment reference, 
+# ensuring the function defined in the previous step is the ONE.
+# Wait, I added the NEW function in the previous step but didn't remove the OLD one potentially?
+# The previous step replaced "teacher_qr_generate_view" and "stop_qr_session_view". 
+# Ah, I need to check if I accidentally duplicated logic or if the old one is still there. 
+# Looking at the previous tool call, I replaced `teacher_qr_generate_view` ... to ... `student_qr_scan_view`.
+# So I effectively appended the new student view. Now I need to delete the OLD one which was around line 122.
 
 def get_display_name(user):
     """
@@ -1776,9 +1740,24 @@ def teacher_qr_generate_view(request):
         'classes': classes,
         'selected_class': None,
         'qr_data': None,
-        'today': today
+        'today': today,
+        'active_session': None
     }
     
+    # Check for existing active session on GET/POST
+    # logic: if teacher visits page, show current active session if exists
+    active_session = AttendanceSession.objects.filter(clazz__teacher=teacher, date=today, is_active=True).first()
+    
+    if active_session:
+        # absolute_uri = request.build_absolute_uri(reverse('dashboard:student_qr_scan', args=[token]))
+        scan_url = request.build_absolute_uri(f"/dashboard/student/qr/scan/{active_session.token}/")
+        context.update({
+            'selected_class': active_session.clazz,
+            'qr_data': scan_url,
+            'session_token': active_session.token,
+            'active_session': active_session
+        })
+
     if request.method == 'POST':
         class_id = request.POST.get('class_id')
         if class_id:
@@ -1790,22 +1769,25 @@ def teacher_qr_generate_view(request):
                 
                 # Create New Session
                 token = uuid.uuid4().hex
+                # Generate simple 4-digit passcode
+                passcode = "".join([str(random.randint(0, 9)) for _ in range(4)])
+                
                 session = AttendanceSession.objects.create(
                     clazz=selected_class,
                     date=today,
                     token=token,
+                    passcode=passcode,
                     is_active=True
                 )
                 
                 # Generate Scan URL
-                # NOTE: This uses the hostname accessed by the teacher. 
-                # Teacher MUST access via IP (192.168.x.x) for phone scanning to work!
                 scan_url = request.build_absolute_uri(f"/dashboard/student/qr/scan/{token}/")
                 
                 context.update({
                     'selected_class': selected_class,
                     'qr_data': scan_url, # Pass URL to frontend
-                    'session_token': token
+                    'session_token': token,
+                    'active_session': session
                 })
                 
                 messages.success(request, f"Attendance session started for {selected_class.class_name}")
@@ -1814,6 +1796,110 @@ def teacher_qr_generate_view(request):
                 messages.error(request, "Invalid class selected.")
 
     return render(request, 'dashboard/teacher_qr_generate.html', context)
+
+@login_required
+def stop_qr_session_view(request, session_id):
+    if not hasattr(request.user, 'teacher'):
+        return redirect('home')
+        
+    session = get_object_or_404(AttendanceSession, pk=session_id)
+    
+    # Security check: Ensure session belongs to teacher's class
+    if session.clazz.teacher != request.user.teacher:
+        messages.error(request, "Unauthorized action.")
+        return redirect('dashboard:teacher_qr')
+        
+    session.is_active = False
+    session.save()
+    
+    # Auto-Absent Logic: Mark all students without an attendance record as 'Absent'
+    # 1. Get all approved enrollments for this class
+    enrollments = Enrollment.objects.filter(clazz=session.clazz, status='approved')
+    
+    # 2. Get IDs of enrollments that ALREADY have an attendance record (Present, Excused, or manually marked Absent)
+    existing_attendance_ids = Attendance.objects.filter(
+        enrollment__in=enrollments,
+        date=session.date
+    ).values_list('enrollment_id', flat=True)
+    
+    # 3. Identify students who have NO record
+    absent_records = []
+    for enrollment in enrollments:
+        if enrollment.pk not in existing_attendance_ids:
+            absent_records.append(Attendance(
+                enrollment=enrollment,
+                date=session.date,
+                status='Absent'
+            ))
+    
+    # 4. Bulk create 'Absent' records
+    if absent_records:
+        Attendance.objects.bulk_create(absent_records)
+        messages.info(request, f"Session stopped. {len(absent_records)} students marked as Absent.")
+    else:
+        messages.success(request, "Session stopped successfully.")
+
+    return redirect('dashboard:teacher_qr')
+    
+@login_required
+def student_qr_scan_view(request, token):
+    if not hasattr(request.user, 'student'):
+        return render(request, 'dashboard/student_qr_success.html', {
+            'success': False,
+            'error_message': "Access denied. Students only."
+        })
+
+    student = request.user.student
+    
+    # Find Session
+    try:
+        session = AttendanceSession.objects.get(token=token, is_active=True)
+    except AttendanceSession.DoesNotExist:
+        return render(request, 'dashboard/student_qr_success.html', {
+            'success': False,
+            'error_message': "Invalid or expired session."
+        })
+
+    # Check expiration (e.g. valid for same day)
+    if session.date != datetime.date.today():
+         return render(request, 'dashboard/student_qr_success.html', {
+            'success': False,
+            'error_message': "This session has expired."
+        })
+        
+    # Check Enrollment
+    enrollment = Enrollment.objects.filter(student=student, clazz=session.clazz, status='approved').first()
+    if not enrollment:
+        return render(request, 'dashboard/student_qr_success.html', {
+            'success': False,
+            'error_message': "You are not enrolled in this class."
+        })
+
+    # VERIFICATION LOGIC
+    if request.method == 'POST':
+        input_code = request.POST.get('passcode')
+        if input_code == session.passcode:
+            # Record Attendance
+            Attendance.objects.update_or_create(
+                enrollment=enrollment,
+                date=session.date,
+                defaults={'status': 'Present'}
+            )
+            return render(request, 'dashboard/student_qr_success.html', {
+                'success': True,
+                'clazz': session.clazz,
+                'date': session.date
+            })
+        else:
+             return render(request, 'dashboard/student_verify_form.html', {
+                'token': token,
+                'error': "Incorrect passcode. Please try again."
+            })
+    
+    # If GET, show verification form
+    return render(request, 'dashboard/student_verify_form.html', {
+        'token': token
+    })
 
 @login_required
 def teacher_schedule_view(request):

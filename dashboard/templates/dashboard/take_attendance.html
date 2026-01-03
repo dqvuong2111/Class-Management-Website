@@ -48,7 +48,7 @@
                             </td>
                             <td class="px-6 py-6 text-center">
                                 <label class="cursor-pointer inline-flex items-center justify-center p-3 rounded-lg hover:bg-green-50 transition-colors">
-                                    <input type="radio" name="status_{{ item.enrollment.pk }}" value="Present" class="h-6 w-6 text-green-600 focus:ring-green-500 border-gray-300" {% if item.status == 'Present' or not item.status %}checked{% endif %}>
+                                    <input type="radio" name="status_{{ item.enrollment.pk }}" value="Present" class="h-6 w-6 text-green-600 focus:ring-green-500 border-gray-300" {% if item.status == 'Present' %}checked{% endif %}>
                                     <span class="ml-2 text-green-700 font-medium hidden sm:inline">Present</span>
                                 </label>
                             </td>

@@ -171,6 +171,7 @@ class AttendanceSession(models.Model):
     clazz = models.ForeignKey(Clazz, on_delete=models.CASCADE, related_name="attendance_sessions", verbose_name="Class")
     date = models.DateField(default=timezone.now, verbose_name="Date")
     token = models.CharField(max_length=64, unique=True, verbose_name="Session Token")
+    passcode = models.CharField(max_length=4, default='0000', verbose_name="Session Passcode")
     is_active = models.BooleanField(default=True, verbose_name="Is Active")
     created_at = models.DateTimeField(auto_now_add=True)
 
