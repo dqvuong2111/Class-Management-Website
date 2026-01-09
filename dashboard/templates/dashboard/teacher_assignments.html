@@ -1,6 +1,12 @@
 {% extends 'dashboard/teacher_base_dashboard.html' %}
 {% load static %}
 
+{% block breadcrumb %}
+<a href="{% url 'dashboard:teacher_dashboard' %}">My Classes</a>
+<span class="separator">/</span>
+<span class="current">Assignments</span>
+{% endblock %}
+
 {% block title %}My Assignments{% endblock %}
 
 {% block content %}

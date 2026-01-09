@@ -1,6 +1,12 @@
 {% extends 'dashboard/student_base_dashboard.html' %}
 {% load static %}
 
+{% block breadcrumb %}
+<a href="{% url 'dashboard:student_dashboard' %}">Dashboard</a>
+<span class="separator">/</span>
+<span class="current">Browse Courses</span>
+{% endblock %}
+
 {% block title %}Browse Courses{% endblock %}
 
 {% block content %}

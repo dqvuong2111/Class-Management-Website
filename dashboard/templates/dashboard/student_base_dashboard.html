@@ -9,6 +9,7 @@
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://unpkg.com/lucide@latest"></script>
     <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <link href="{% static 'css/dashboard_utilities.css' %}" rel="stylesheet">
     
     <style>
         body { font-family: 'Plus Jakarta Sans', sans-serif; }
@@ -23,7 +24,7 @@
     {% include 'dashboard/sidebar_student.html' %}
 
     <!-- Main Content -->
-    <div class="flex-1 flex flex-col min-w-0 overflow-hidden">
+    <div id="main-content" class="flex-1 flex flex-col min-w-0 overflow-hidden">
         <!-- Mobile Header -->
         <header class="md:hidden flex items-center justify-between bg-white border-b border-gray-200 px-4 py-3">
             <div class="flex items-center gap-3">
@@ -37,14 +38,35 @@
             </button>
         </header>
 
-        <!-- Desktop Header / Toolbar (New) -->
-        <div class="hidden md:flex items-center px-8 py-4">
-             <button id="sidebar-toggle-student" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
-                <i data-lucide="panel-left" class="h-6 w-6"></i>
-             </button>
+        <!-- Desktop Header / Toolbar -->
+        <div class="hidden md:flex items-center justify-between px-8 py-4 bg-white/50 backdrop-blur-sm border-b border-gray-100">
+            <div class="flex items-center gap-4">
+                <button id="sidebar-toggle-student" class="p-2 rounded-lg text-gray-500 hover:bg-gray-100 transition-colors">
+                    <i data-lucide="panel-left" class="h-5 w-5"></i>
+                </button>
+                
+                <!-- Breadcrumb -->
+                <nav class="breadcrumb" aria-label="Breadcrumb">
+                    <a href="{% url 'dashboard:student_dashboard' %}"><i data-lucide="home" class="h-4 w-4"></i></a>
+                    <span class="separator">/</span>
+                    {% block breadcrumb %}
+                    <span class="current">Dashboard</span>
+                    {% endblock %}
+                </nav>
+            </div>
+            
+            <!-- Command Palette Trigger -->
+            <button onclick="openCommandPalette()" class="flex items-center gap-3 px-4 py-2 bg-gray-100 hover:bg-gray-200 rounded-xl text-gray-600 transition-colors">
+                <i data-lucide="search" class="h-4 w-4"></i>
+                <span class="text-sm">Quick search...</span>
+                <span class="flex items-center gap-1 text-xs text-gray-400">
+                    <kbd class="kbd-hint">Ctrl</kbd>
+                    <kbd class="kbd-hint">K</kbd>
+                </span>
+            </button>
         </div>
 
-        <main class="flex-1 overflow-y-auto px-4 md:px-8 pb-8">
+        <main class="flex-1 overflow-y-auto px-4 md:px-8 pb-8 custom-scroll">
             <!-- Toast Messages -->
             {% if messages %}
             {% for message in messages %}
@@ -72,22 +94,54 @@
         </main>
     </div>
 
+    <!-- Command Palette -->
+    <div id="command-palette-overlay" onclick="if(event.target === this) closeCommandPalette()">
+        <div id="command-palette">
+            <input type="text" id="command-search" placeholder="Search for courses, schedule, or actions..." autocomplete="off" onkeydown="handleCommandKey(event)" oninput="filterCommands()">
+            <div class="command-results" id="command-results"></div>
+        </div>
+    </div>
+
+    <!-- Floating Action Button (hidden on messages page) -->
+    {% if request.resolver_match.url_name != 'messages' %}
+    <div class="fab-container" id="fab-container">
+        <div class="fab-menu">
+            <a href="{% url 'dashboard:student_courses' %}" class="fab-item">
+                <div class="icon bg-gray-900 text-white">
+                    <i data-lucide="book-plus" class="h-4 w-4"></i>
+                </div>
+                <span>Browse Courses</span>
+            </a>
+            <a href="{% url 'dashboard:student_schedule' %}" class="fab-item">
+                <div class="icon bg-gray-900 text-white">
+                    <i data-lucide="calendar" class="h-4 w-4"></i>
+                </div>
+                <span>My Schedule</span>
+            </a>
+            <a href="{% url 'dashboard:messages' %}" class="fab-item">
+                <div class="icon bg-gray-900 text-white">
+                    <i data-lucide="message-circle" class="h-4 w-4"></i>
+                </div>
+                <span>Messages</span>
+            </a>
+        </div>
+        <button class="fab-trigger" onclick="this.classList.toggle('active'); this.closest('.fab-container').classList.toggle('open')">
+            <i data-lucide="plus" class="h-6 w-6"></i>
+        </button>
+    </div>
+    {% endif %}
+
     <script>
         lucide.createIcons();
         
-        // Sidebar Toggle Logic
+        // Sidebar Toggle Logic - Keep sidebar visible by default
         const toggleBtn = document.getElementById('sidebar-toggle-student');
         const sidebar = document.getElementById('student-sidebar');
         
-        // Load State
-        if (localStorage.getItem('studentSidebarCollapsed') === 'true') {
-            sidebar.classList.add('md:hidden'); // Use md:hidden so it doesn't affect mobile
-        }
-        
-        if (toggleBtn) {
+        // Don't auto-hide sidebar - keep it always visible on desktop
+        if (toggleBtn && sidebar) {
             toggleBtn.addEventListener('click', () => {
-                const isCollapsed = sidebar.classList.toggle('md:hidden'); // Toggle Visibility
-                localStorage.setItem('studentSidebarCollapsed', isCollapsed);
+                sidebar.classList.toggle('md:hidden');
             });
         }
 
@@ -98,6 +152,102 @@
                 setTimeout(() => toast.remove(), 300);
             });
         }, 5000);
+
+        // Command Palette
+        const commands = [
+            { title: 'Dashboard', subtitle: 'Go to home', icon: 'layout-dashboard', url: '{% url "dashboard:student_dashboard" %}', shortcut: ['G', 'D'] },
+            { title: 'Browse Courses', subtitle: 'Find new courses', icon: 'book-plus', url: '{% url "dashboard:student_courses" %}', shortcut: ['G', 'C'] },
+            { title: 'My Schedule', subtitle: 'View weekly schedule', icon: 'calendar', url: '{% url "dashboard:student_schedule" %}', shortcut: ['G', 'S'] },
+            { title: 'Grades & Achievements', subtitle: 'Check your scores', icon: 'award', url: '{% url "dashboard:student_achievements" %}', shortcut: ['G', 'G'] },
+            { title: 'Pending Requests', subtitle: 'View enrollment status', icon: 'hourglass', url: '{% url "dashboard:student_pending" %}' },
+            { title: 'Messages', subtitle: 'Chat with teachers', icon: 'mail', url: '{% url "dashboard:messages" %}', shortcut: ['G', 'M'] },
+            { title: 'Back to Home', subtitle: 'Exit portal', icon: 'home', url: '{% url "home" %}' },
+        ];
+
+        let selectedCommandIndex = 0;
+
+        function openCommandPalette() {
+            document.getElementById('command-palette-overlay').classList.add('active');
+            document.getElementById('command-search').value = '';
+            document.getElementById('command-search').focus();
+            renderCommands(commands);
+        }
+
+        function closeCommandPalette() {
+            document.getElementById('command-palette-overlay').classList.remove('active');
+        }
+
+        function renderCommands(cmds) {
+            const container = document.getElementById('command-results');
+            selectedCommandIndex = 0;
+            container.innerHTML = cmds.map((cmd, i) => `
+                <a href="${cmd.url}" class="command-item ${i === 0 ? 'active' : ''}" data-index="${i}">
+                    <div class="icon"><i data-lucide="${cmd.icon}" class="h-5 w-5"></i></div>
+                    <div class="info">
+                        <div class="title">${cmd.title}</div>
+                        <div class="subtitle">${cmd.subtitle}</div>
+                    </div>
+                    ${cmd.shortcut ? `<div class="shortcut">${cmd.shortcut.map(k => `<kbd>${k}</kbd>`).join('')}</div>` : ''}
+                </a>
+            `).join('');
+            lucide.createIcons();
+        }
+
+        function filterCommands() {
+            const query = document.getElementById('command-search').value.toLowerCase();
+            const filtered = commands.filter(cmd => 
+                cmd.title.toLowerCase().includes(query) || 
+                cmd.subtitle.toLowerCase().includes(query)
+            );
+            renderCommands(filtered);
+        }
+
+        function handleCommandKey(e) {
+            const items = document.querySelectorAll('.command-item');
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                selectedCommandIndex = Math.min(selectedCommandIndex + 1, items.length - 1);
+                updateSelection(items);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                selectedCommandIndex = Math.max(selectedCommandIndex - 1, 0);
+                updateSelection(items);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                if (items[selectedCommandIndex]) window.location.href = items[selectedCommandIndex].href;
+            } else if (e.key === 'Escape') {
+                closeCommandPalette();
+            }
+        }
+
+        function updateSelection(items) {
+            items.forEach((item, i) => item.classList.toggle('active', i === selectedCommandIndex));
+            items[selectedCommandIndex]?.scrollIntoView({ block: 'nearest' });
+        }
+
+        document.addEventListener('keydown', (e) => {
+            if ((e.ctrlKey || e.metaKey) && e.key === 'k') {
+                e.preventDefault();
+                openCommandPalette();
+            }
+            if (e.key === 'Escape') closeCommandPalette();
+        });
+
+        let gPressed = false;
+        document.addEventListener('keydown', (e) => {
+            if (document.activeElement.tagName === 'INPUT') return;
+            if (e.key === 'g') {
+                gPressed = true;
+                setTimeout(() => gPressed = false, 500);
+            } else if (gPressed) {
+                if (e.key === 'd') window.location.href = '{% url "dashboard:student_dashboard" %}';
+                if (e.key === 'c') window.location.href = '{% url "dashboard:student_courses" %}';
+                if (e.key === 's') window.location.href = '{% url "dashboard:student_schedule" %}';
+                if (e.key === 'g') window.location.href = '{% url "dashboard:student_achievements" %}';
+                if (e.key === 'm') window.location.href = '{% url "dashboard:messages" %}';
+                gPressed = false;
+            }
+        });
     </script>
 </body>
 </html>

@@ -1,5 +1,11 @@
 {% extends 'dashboard/base_dashboard.html' %}
 
+{% block breadcrumb %}
+<a href="{% url 'dashboard:dashboard' %}">Dashboard</a>
+<span class="separator">/</span>
+<span class="current">Students</span>
+{% endblock %}
+
 {% block content %}
 <div class="max-w-7xl mx-auto space-y-6">
     <!-- Header -->
@@ -26,54 +32,56 @@
         <div class="absolute top-0 right-0 -mr-10 -mt-10 w-40 h-40 rounded-full bg-white/5 blur-2xl"></div>
     </div>
 
-    <!-- Search -->
+    <!-- Search & Filter Bar -->
     <div class="bg-white rounded-2xl p-4 shadow-sm border border-gray-100 flex flex-col md:flex-row gap-4 items-center justify-between">
         <div class="relative w-full md:max-w-md">
-            <form method="get" action="{% url 'dashboard:manage_students' %}">
-                <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"></i>
-                <input 
-                    type="text" 
-                    name="q" 
-                    placeholder="Search by name, email, or ID..." 
-                    value="{{ query|default:'' }}"
-                    class="w-full pl-12 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
-                >
-            </form>
+            <i data-lucide="search" class="absolute left-4 top-1/2 -translate-y-1/2 h-5 w-5 text-gray-400"></i>
+            <input 
+                type="text" 
+                id="student-search"
+                placeholder="Search by name, email, or ID..." 
+                class="w-full pl-12 pr-4 py-2.5 rounded-xl border border-gray-200 bg-gray-50 focus:bg-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent transition-all"
+            >
         </div>
-        <div class="text-sm text-gray-500 font-medium">
-             Showing <span class="text-gray-900 font-bold">{{ students|length }}</span> students
+        <div class="flex items-center gap-4">
+            <div class="text-sm text-gray-500 font-medium">
+                 Showing <span class="text-gray-900 font-bold" id="visible-count">{{ students|length }}</span> of <span class="text-gray-900 font-bold">{{ students|length }}</span> students
+            </div>
         </div>
     </div>
 
     <!-- Table -->
     <div class="bg-white rounded-3xl border border-gray-200 shadow-lg overflow-hidden">
-        <div class="overflow-x-auto table-scrollbar max-h-[600px]">
-            <table class="w-full text-sm text-left">
+        <div class="overflow-x-auto custom-scroll max-h-[600px]">
+            <table class="w-full text-sm text-left table-enhanced">
                 <thead class="bg-gray-50/50 text-gray-500 font-semibold border-b border-gray-100 sticky top-0 z-10 backdrop-blur-sm">
                     <tr>
-                        <th class="px-6 py-4">Student</th>
-                        <th class="px-6 py-4">Student ID</th>
+                        <th class="px-6 py-4 sortable" data-sort="name">Student</th>
+                        <th class="px-6 py-4 sortable" data-sort="id">Student ID</th>
                         <th class="px-6 py-4">Contact</th>
                         <th class="px-6 py-4">Status</th>
                         <th class="px-6 py-4 text-right">Actions</th>
                     </tr>
                 </thead>
-                <tbody class="divide-y divide-gray-50">
+                <tbody class="divide-y divide-gray-50" id="student-table-body">
                     {% for student in students %}
-                    <tr class="hover:bg-gray-50 transition-colors group">
+                    <tr class="hover:bg-gray-50 transition-colors student-row" 
+                        data-name="{{ student.full_name|lower }}" 
+                        data-email="{{ student.email|lower }}" 
+                        data-id="{{ student.student_id|lower }}">
                         <td class="px-6 py-4">
                             <div class="flex items-center gap-4">
                                 <div class="h-10 w-10 rounded-full bg-indigo-100 flex items-center justify-center text-indigo-600 font-bold border border-indigo-200">
                                     {{ student.full_name|slice:":2"|upper }}
                                 </div>
                                 <div>
-                                    <p class="font-bold text-gray-900">{{ student.full_name }}</p>
-                                    <p class="text-xs text-gray-500">{{ student.email }}</p>
+                                    <p class="font-bold text-gray-900 student-name">{{ student.full_name }}</p>
+                                    <p class="text-xs text-gray-500 student-email">{{ student.email }}</p>
                                 </div>
                             </div>
                         </td>
                         <td class="px-6 py-4">
-                            <span class="font-mono text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg border border-gray-200">
+                            <span class="font-mono text-xs bg-gray-100 text-gray-700 px-2.5 py-1 rounded-lg border border-gray-200 student-id-display">
                                 {{ student.student_id }}
                             </span>
                         </td>
@@ -86,24 +94,30 @@
                             </span>
                         </td>
                         <td class="px-6 py-4 text-right">
-                            <div class="flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                <a href="{% url 'dashboard:edit_student' student.pk %}" class="p-2 text-gray-400 hover:text-indigo-600 hover:bg-indigo-50 rounded-xl transition-all">
-                                    <i data-lucide="edit-3" class="h-4.5 w-4.5"></i>
+                            <!-- Always visible action buttons -->
+                            <div class="action-buttons justify-end">
+                                <a href="{% url 'dashboard:edit_student' student.pk %}" class="action-btn edit" title="Edit Student">
+                                    <i data-lucide="edit-3" class="h-4 w-4"></i>
                                 </a>
-                                <a href="{% url 'dashboard:delete_student' student.pk %}" class="p-2 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-xl transition-all">
-                                    <i data-lucide="trash-2" class="h-4.5 w-4.5"></i>
+                                <a href="{% url 'dashboard:delete_student' student.pk %}" class="action-btn delete" title="Delete Student" onclick="return confirm('Are you sure you want to delete this student?')">
+                                    <i data-lucide="trash-2" class="h-4 w-4"></i>
                                 </a>
                             </div>
                         </td>
                     </tr>
                     {% empty %}
-                    <tr>
+                    <tr id="empty-state">
                         <td colspan="5" class="px-6 py-12 text-center text-gray-500">
-                            <div class="mx-auto h-16 w-16 bg-gray-50 rounded-full flex items-center justify-center mb-4">
-                                <i data-lucide="users" class="h-8 w-8 text-gray-300"></i>
+                            <div class="empty-state">
+                                <div class="icon">
+                                    <i data-lucide="users" class="h-8 w-8"></i>
+                                </div>
+                                <h3>No Students Found</h3>
+                                <p>Add students to start managing your class roster.</p>
+                                <a href="{% url 'dashboard:add_student' %}" class="inline-flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-bold rounded-xl hover:shadow-lg transition-all">
+                                    <i data-lucide="plus" class="h-4 w-4 mr-2"></i> Add First Student
+                                </a>
                             </div>
-                            <h3 class="text-lg font-bold text-gray-900 mb-1">No Students Found</h3>
-                            <p class="text-sm">Add students to start managing your class roster.</p>
                         </td>
                     </tr>
                     {% endfor %}
@@ -111,5 +125,87 @@
             </table>
         </div>
     </div>
+
+    <!-- No Results State -->
+    <div id="no-results" class="hidden bg-white rounded-2xl p-12 text-center border border-gray-200">
+        <div class="empty-state">
+            <div class="icon">
+                <i data-lucide="search-x" class="h-8 w-8"></i>
+            </div>
+            <h3>No matching students</h3>
+            <p>Try adjusting your search terms</p>
+        </div>
+    </div>
 </div>
+
+<script>
+// Real-time search filtering
+const searchInput = document.getElementById('student-search');
+const tableBody = document.getElementById('student-table-body');
+const rows = document.querySelectorAll('.student-row');
+const visibleCountEl = document.getElementById('visible-count');
+const noResultsEl = document.getElementById('no-results');
+const tableContainer = document.querySelector('.table-enhanced').closest('.bg-white');
+
+searchInput?.addEventListener('input', function() {
+    const query = this.value.toLowerCase().trim();
+    let visibleCount = 0;
+    
+    rows.forEach(row => {
+        const name = row.dataset.name || '';
+        const email = row.dataset.email || '';
+        const id = row.dataset.id || '';
+        
+        const matches = name.includes(query) || email.includes(query) || id.includes(query);
+        row.style.display = matches ? '' : 'none';
+        if (matches) visibleCount++;
+    });
+    
+    visibleCountEl.textContent = visibleCount;
+    
+    // Show/hide no results message
+    if (visibleCount === 0 && rows.length > 0) {
+        tableContainer.classList.add('hidden');
+        noResultsEl.classList.remove('hidden');
+    } else {
+        tableContainer.classList.remove('hidden');
+        noResultsEl.classList.add('hidden');
+    }
+});
+
+// Sortable columns
+document.querySelectorAll('th.sortable').forEach(th => {
+    th.addEventListener('click', function() {
+        const sortKey = this.dataset.sort;
+        const isAsc = this.classList.contains('asc');
+        
+        // Reset all other headers
+        document.querySelectorAll('th.sortable').forEach(h => h.classList.remove('asc', 'desc'));
+        
+        // Toggle sort direction
+        this.classList.add(isAsc ? 'desc' : 'asc');
+        
+        // Sort rows
+        const sortedRows = Array.from(rows).sort((a, b) => {
+            let aVal, bVal;
+            if (sortKey === 'name') {
+                aVal = a.dataset.name;
+                bVal = b.dataset.name;
+            } else if (sortKey === 'id') {
+                aVal = a.dataset.id;
+                bVal = b.dataset.id;
+            }
+            
+            if (isAsc) {
+                return bVal.localeCompare(aVal);
+            }
+            return aVal.localeCompare(bVal);
+        });
+        
+        sortedRows.forEach(row => tableBody.appendChild(row));
+    });
+});
+
+lucide.createIcons();
+</script>
 {% endblock %}
